@@ -40,8 +40,7 @@ const Dashboard = () => {
         .from("appointments")
         .select(`
           *,
-          patients (first_name, last_name, phone, photo_thumbnail_url),
-          profiles!appointments_doctor_id_fkey (full_name)
+          patients (first_name, last_name, phone, photo_thumbnail_url)
         `)
         .eq("appointment_date", today)
         .order("appointment_time", { ascending: true });
