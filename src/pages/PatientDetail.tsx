@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, FileText, Save, ArrowLeft } from "lucide-react";
+import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
+import { ConsentCapture } from "@/components/ConsentCapture";
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -21,6 +23,8 @@ const PatientDetail = () => {
   const isNew = id === "new";
 
   const [loading, setLoading] = useState(false);
+  const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
+  const [consentCaptureOpen, setConsentCaptureOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -36,6 +40,10 @@ const PatientDetail = () => {
     preferred_communication: "sms",
     notes: "",
     consent_signed: false,
+    photo_url: null as string | null,
+    photo_thumbnail_url: null as string | null,
+    consent_document_url: null as string | null,
+    consent_signed_at: null as string | null,
   });
 
   useEffect(() => {
@@ -129,6 +137,7 @@ const PatientDetail = () => {
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="contact">Contact & Emergency</TabsTrigger>
               <TabsTrigger value="insurance">Insurance</TabsTrigger>
+              {!isNew && <TabsTrigger value="photo">Photo & Consent</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="basic">
@@ -142,6 +151,9 @@ const PatientDetail = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4 mb-6">
                     <Avatar className="h-20 w-20">
+                      {formData.photo_thumbnail_url && (
+                        <AvatarImage src={formData.photo_thumbnail_url} alt={`${formData.first_name} ${formData.last_name}`} />
+                      )}
                       <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                         {getInitials() || "?"}
                       </AvatarFallback>
@@ -311,6 +323,79 @@ const PatientDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {!isNew && (
+              <TabsContent value="photo">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Camera className="h-5 w-5" />
+                        Patient Photo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-col items-center gap-4">
+                        <Avatar className="h-40 w-40">
+                          {formData.photo_url && (
+                            <AvatarImage src={formData.photo_url} alt={`${formData.first_name} ${formData.last_name}`} />
+                          )}
+                          <AvatarFallback className="bg-primary text-primary-foreground text-5xl">
+                            {getInitials() || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <Button onClick={() => setPhotoUploadOpen(true)} className="w-full">
+                          <Camera className="mr-2 h-4 w-4" />
+                          {formData.photo_url ? "Change Photo" : "Upload Photo"}
+                        </Button>
+                        {formData.photo_url && (
+                          <p className="text-xs text-muted-foreground text-center">
+                            Photo uploaded on {formData.photo_url ? new Date().toLocaleDateString() : ""}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileSignature className="h-5 w-5" />
+                        Consent Form
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {formData.consent_signed ? (
+                        <div className="space-y-4">
+                          <Badge className="bg-success/10 text-success">Consent Signed</Badge>
+                          <p className="text-sm text-muted-foreground">
+                            Signed on: {formData.consent_signed_at ? new Date(formData.consent_signed_at).toLocaleDateString() : "N/A"}
+                          </p>
+                          {formData.consent_document_url && (
+                            <Button variant="outline" className="w-full" asChild>
+                              <a href={formData.consent_document_url} target="_blank" rel="noopener noreferrer">
+                                View Signature
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <Badge variant="secondary">Consent Not Signed</Badge>
+                          <p className="text-sm text-muted-foreground">
+                            Patient has not signed the consent form yet.
+                          </p>
+                          <Button onClick={() => setConsentCaptureOpen(true)} className="w-full">
+                            <FileSignature className="mr-2 h-4 w-4" />
+                            Sign Consent
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           <div className="flex justify-end gap-2 mt-6">
@@ -323,6 +408,33 @@ const PatientDetail = () => {
             </Button>
           </div>
         </form>
+
+        {!isNew && (
+          <>
+            <PatientPhotoUpload
+              open={photoUploadOpen}
+              onOpenChange={setPhotoUploadOpen}
+              patientId={id!}
+              onUploadComplete={(photoUrl, thumbnailUrl) => {
+                setFormData({ ...formData, photo_url: photoUrl, photo_thumbnail_url: thumbnailUrl });
+              }}
+            />
+            <ConsentCapture
+              open={consentCaptureOpen}
+              onOpenChange={setConsentCaptureOpen}
+              patientId={id!}
+              patientName={`${formData.first_name} ${formData.last_name}`}
+              onConsentComplete={(consentUrl) => {
+                setFormData({
+                  ...formData,
+                  consent_signed: true,
+                  consent_signed_at: new Date().toISOString(),
+                  consent_document_url: consentUrl,
+                });
+              }}
+            />
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
