@@ -8,7 +8,9 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Patients from "./pages/Patients";
+import PatientDetail from "./pages/PatientDetail";
 import Appointments from "./pages/Appointments";
+import AppointmentDetail from "./pages/AppointmentDetail";
 import Followups from "./pages/Followups";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -28,7 +30,9 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/patients" element={<Patients />} />
+          <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/appointments/:id" element={<AppointmentDetail />} />
           <Route path="/followups" element={<Followups />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
