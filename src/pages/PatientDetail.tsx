@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature } from "lucide-react";
+import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
 import { ConsentCapture } from "@/components/ConsentCapture";
@@ -116,6 +116,36 @@ const PatientDetail = () => {
     return `${formData.first_name?.[0] || ""}${formData.last_name?.[0] || ""}`.toUpperCase();
   };
 
+  const sendWhatsAppMessage = (message: string) => {
+    const phoneNumber = formData.phone.replace(/\D/g, "");
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, "_blank");
+  };
+
+  const handleWhatsAppShare = (type: string) => {
+    const patientName = `${formData.first_name} ${formData.last_name}`;
+    let message = "";
+
+    switch (type) {
+      case "details":
+        message = `Hello ${patientName},\n\nYour patient details have been updated in our system.\n\nIf you have any questions, please contact us.\n\nBest regards,\nDr. Prasanna's Clinic`;
+        break;
+      case "appointment":
+        message = `Hello ${patientName},\n\nThis is a reminder about your upcoming appointment.\n\nPlease arrive 10 minutes early.\n\nBest regards,\nDr. Prasanna's Clinic`;
+        break;
+      case "prescription":
+        message = `Hello ${patientName},\n\nYour prescription is ready. Please contact us for details.\n\nBest regards,\nDr. Prasanna's Clinic`;
+        break;
+      case "report":
+        message = `Hello ${patientName},\n\nYour medical report is ready for collection.\n\nBest regards,\nDr. Prasanna's Clinic`;
+        break;
+      default:
+        message = `Hello ${patientName},\n\nWe wanted to reach out to you.\n\nBest regards,\nDr. Prasanna's Clinic`;
+    }
+
+    sendWhatsAppMessage(message);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -141,6 +171,7 @@ const PatientDetail = () => {
               <TabsTrigger value="insurance">Insurance</TabsTrigger>
               {!isNew && <TabsTrigger value="photo">Photo & Consent</TabsTrigger>}
               {!isNew && <TabsTrigger value="medical">Medical Records</TabsTrigger>}
+              {!isNew && <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="basic">
@@ -409,6 +440,71 @@ const PatientDetail = () => {
                     patientEmail={formData.email || undefined}
                   />
                 </div>
+              </TabsContent>
+            )}
+
+            {!isNew && (
+              <TabsContent value="whatsapp">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5" />
+                      WhatsApp Quick Actions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Send quick messages to {formData.first_name} via WhatsApp
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleWhatsAppShare("details")}
+                        className="w-full justify-start"
+                        disabled={!formData.phone}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Share Patient Details
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleWhatsAppShare("appointment")}
+                        className="w-full justify-start"
+                        disabled={!formData.phone}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Send Appointment Reminder
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleWhatsAppShare("prescription")}
+                        className="w-full justify-start"
+                        disabled={!formData.phone}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Share Prescription Info
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleWhatsAppShare("report")}
+                        className="w-full justify-start"
+                        disabled={!formData.phone}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Share Medical Report
+                      </Button>
+                    </div>
+                    {!formData.phone && (
+                      <p className="text-xs text-destructive mt-4">
+                        Please add a phone number to enable WhatsApp sharing
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             )}
           </Tabs>
