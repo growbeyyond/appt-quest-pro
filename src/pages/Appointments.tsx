@@ -5,13 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ClipboardList, Plus, MessageCircle } from "lucide-react";
+import { ClipboardList, Plus, MessageCircle, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { CheckInDialog } from "@/components/CheckInDialog";
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checkInDialog, setCheckInDialog] = useState<{
+    open: boolean;
+    appointmentId: string;
+    patientName: string;
+  }>({ open: false, appointmentId: "", patientName: "" });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -60,14 +66,17 @@ const Appointments = () => {
   };
 
   const sendWhatsAppMessage = (phone: string, appointment: any) => {
-    if (!phone) return;
-    
-    const message = `Hi ${appointment.patients?.first_name},\n\nYour appointment is scheduled for ${format(new Date(appointment.appointment_date), "MMM dd, yyyy")} at ${appointment.appointment_time}.\n\nDuration: ${appointment.duration_minutes} minutes\nStatus: ${appointment.status.replace("_", " ")}\n\nSee you soon!`;
-    
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
-    
+    const message = `Hi ${appointment.patients.first_name}, this is a reminder about your appointment on ${format(new Date(appointment.appointment_date), 'MMM d')} at ${appointment.appointment_time}. Please arrive 10 minutes early. Reply CONFIRM to confirm.`;
+    const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  const openCheckInDialog = (appointment: any) => {
+    setCheckInDialog({
+      open: true,
+      appointmentId: appointment.id,
+      patientName: `${appointment.patients.first_name} ${appointment.patients.last_name}`,
+    });
   };
 
   return (
@@ -140,6 +149,19 @@ const Appointments = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(appt.status)}
+                      {appt.status === 'scheduled' && (
+                        <Button
+                          size="icon"
+                          variant="default"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openCheckInDialog(appt);
+                          }}
+                          title="Check in patient"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         size="icon"
                         variant="outline"
@@ -160,6 +182,13 @@ const Appointments = () => {
           </CardContent>
         </Card>
       </div>
+
+      <CheckInDialog
+        appointmentId={checkInDialog.appointmentId}
+        patientName={checkInDialog.patientName}
+        open={checkInDialog.open}
+        onOpenChange={(open) => setCheckInDialog({ ...checkInDialog, open })}
+      />
     </DashboardLayout>
   );
 };
