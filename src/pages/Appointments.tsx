@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Plus, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -59,6 +59,17 @@ const Appointments = () => {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
 
+  const sendWhatsAppMessage = (phone: string, appointment: any) => {
+    if (!phone) return;
+    
+    const message = `Hi ${appointment.patients?.first_name},\n\nYour appointment is scheduled for ${format(new Date(appointment.appointment_date), "MMM dd, yyyy")} at ${appointment.appointment_time}.\n\nDuration: ${appointment.duration_minutes} minutes\nStatus: ${appointment.status.replace("_", " ")}\n\nSee you soon!`;
+    
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -98,14 +109,16 @@ const Appointments = () => {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+                <div className="space-y-4">
                 {appointments.map((appt) => (
                   <div
                     key={appt.id}
-                    className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/appointments/${appt.id}`)}
+                    className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar className="h-12 w-12">
+                    <Avatar 
+                      className="h-12 w-12 cursor-pointer"
+                      onClick={() => navigate(`/appointments/${appt.id}`)}
+                    >
                       <AvatarFallback className="bg-primary text-primary-foreground">
                         {getPatientInitials(
                           appt.patients?.first_name,
@@ -113,7 +126,10 @@ const Appointments = () => {
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => navigate(`/appointments/${appt.id}`)}
+                    >
                       <p className="font-medium">
                         {appt.patients?.first_name} {appt.patients?.last_name}
                       </p>
@@ -124,6 +140,18 @@ const Appointments = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(appt.status)}
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sendWhatsAppMessage(appt.patients?.phone, appt);
+                        }}
+                        disabled={!appt.patients?.phone}
+                        title="Send WhatsApp message"
+                      >
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                      </Button>
                     </div>
                   </div>
                 ))}
