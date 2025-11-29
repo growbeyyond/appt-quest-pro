@@ -351,6 +351,41 @@ export type Database = {
           },
         ]
       }
+      patient_portal_access: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_login_at: string | null
+          login_token: string | null
+          patient_id: string
+          token_expires_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_login_at?: string | null
+          login_token?: string | null
+          patient_id: string
+          token_expires_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_login_at?: string | null
+          login_token?: string | null
+          patient_id?: string
+          token_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_portal_access_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
@@ -600,6 +635,66 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      reschedule_requests: {
+        Row: {
+          appointment_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          requested_date: string | null
+          requested_time: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_date?: string | null
+          requested_time?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          requested_date?: string | null
+          requested_time?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reschedule_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reschedule_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sms_reminders: {
         Row: {

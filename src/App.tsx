@@ -20,6 +20,8 @@ import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
 import BranchManagement from "./pages/BranchManagement";
 import AuditLogs from "./pages/AuditLogs";
+import PatientPortal from "./pages/PatientPortal";
+import RescheduleRequests from "./pages/RescheduleRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +51,8 @@ const App = () => (
           <Route path="/users" element={<UserManagement />} />
           <Route path="/branches" element={<BranchManagement />} />
           <Route path="/audit-logs" element={<AuditLogs />} />
+          <Route path="/patient-portal" element={<PatientPortal />} />
+          <Route path="/reschedule-requests" element={<RescheduleRequests />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
