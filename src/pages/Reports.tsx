@@ -1,226 +1,369 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  BarChart3,
-  Calendar,
-  Users,
-  TrendingUp,
-  DollarSign,
-  Clock,
-} from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Calendar, Users, CalendarCheck, DollarSign, TrendingUp, FileText, Activity } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const Reports = () => {
+const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
+
+export default function Reports() {
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState("thisMonth");
   const [stats, setStats] = useState({
     totalPatients: 0,
-    monthlyAppointments: 0,
+    totalAppointments: 0,
     completedAppointments: 0,
-    pendingFollowups: 0,
-    averageWaitTime: 0,
-    noShowRate: 0,
+    noShows: 0,
+    revenue: 0,
+    newPatients: 0,
+    followups: 0,
+    prescriptions: 0
   });
-  const [loading, setLoading] = useState(true);
+  const [appointmentsByType, setAppointmentsByType] = useState<any[]>([]);
+  const [appointmentsByStatus, setAppointmentsByStatus] = useState<any[]>([]);
+  const [dailyAppointments, setDailyAppointments] = useState<any[]>([]);
+  const [topReasons, setTopReasons] = useState<any[]>([]);
 
   useEffect(() => {
-    loadReportData();
-  }, []);
+    loadReports();
+  }, [dateRange]);
 
-  const loadReportData = async () => {
+  const getDateRangeFilter = () => {
+    const now = new Date();
+    let start, end;
+
+    switch (dateRange) {
+      case "thisMonth":
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
+      case "lastMonth":
+        start = startOfMonth(subMonths(now, 1));
+        end = endOfMonth(subMonths(now, 1));
+        break;
+      case "last3Months":
+        start = startOfMonth(subMonths(now, 3));
+        end = endOfMonth(now);
+        break;
+      default:
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+    }
+
+    return { start: format(start, "yyyy-MM-dd"), end: format(end, "yyyy-MM-dd") };
+  };
+
+  const loadReports = async () => {
     try {
-      const now = new Date();
-      const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-      const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+      setLoading(true);
+      const { start, end } = getDateRangeFilter();
 
       // Total patients
       const { count: patientCount } = await supabase
         .from("patients")
         .select("*", { count: "exact", head: true });
 
-      // Monthly appointments
-      const { count: monthlyApptCount } = await supabase
-        .from("appointments")
+      // New patients in range
+      const { count: newPatientCount } = await supabase
+        .from("patients")
         .select("*", { count: "exact", head: true })
-        .gte("appointment_date", monthStart)
-        .lte("appointment_date", monthEnd);
+        .gte("created_at", start)
+        .lte("created_at", end);
 
-      // Completed appointments this month
-      const { count: completedCount } = await supabase
+      // Appointments stats
+      const { data: appointments, count: appointmentCount } = await supabase
         .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "completed")
-        .gte("appointment_date", monthStart)
-        .lte("appointment_date", monthEnd);
+        .select("*", { count: "exact" })
+        .gte("appointment_date", start)
+        .lte("appointment_date", end);
 
-      // Pending follow-ups
+      const completedCount = appointments?.filter(a => a.status === "completed").length || 0;
+      const noShowCount = appointments?.filter(a => a.status === "no_show").length || 0;
+
+      // Appointments by type
+      const typeStats = appointments?.reduce((acc: any, apt) => {
+        acc[apt.appointment_type] = (acc[apt.appointment_type] || 0) + 1;
+        return acc;
+      }, {});
+      const typeData = Object.entries(typeStats || {}).map(([name, value]) => ({ name, value }));
+
+      // Appointments by status
+      const statusStats = appointments?.reduce((acc: any, apt) => {
+        acc[apt.status] = (acc[apt.status] || 0) + 1;
+        return acc;
+      }, {});
+      const statusData = Object.entries(statusStats || {}).map(([name, value]) => ({ name, value }));
+
+      // Daily appointments trend
+      const dailyStats = appointments?.reduce((acc: any, apt) => {
+        const date = apt.appointment_date;
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {});
+      const dailyData = Object.entries(dailyStats || {})
+        .map(([date, count]) => ({ date: format(new Date(date), "MMM dd"), count }))
+        .slice(0, 30);
+
+      // Top reasons
+      const reasonStats = appointments?.reduce((acc: any, apt) => {
+        if (apt.reason) {
+          acc[apt.reason] = (acc[apt.reason] || 0) + 1;
+        }
+        return acc;
+      }, {});
+      const reasonData = Object.entries(reasonStats || {})
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a: any, b: any) => b.count - a.count)
+        .slice(0, 5);
+
+      // Followups
       const { count: followupCount } = await supabase
         .from("followups")
         .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
+        .gte("followup_date", start)
+        .lte("followup_date", end);
 
-      // No-show appointments this month
-      const { count: noShowCount } = await supabase
-        .from("appointments")
+      // Prescriptions
+      const { count: prescriptionCount } = await supabase
+        .from("prescriptions")
         .select("*", { count: "exact", head: true })
-        .eq("status", "no_show")
-        .gte("appointment_date", monthStart)
-        .lte("appointment_date", monthEnd);
-
-      const noShowRate = monthlyApptCount
-        ? ((noShowCount || 0) / monthlyApptCount) * 100
-        : 0;
+        .gte("prescribed_date", start)
+        .lte("prescribed_date", end);
 
       setStats({
         totalPatients: patientCount || 0,
-        monthlyAppointments: monthlyApptCount || 0,
-        completedAppointments: completedCount || 0,
-        pendingFollowups: followupCount || 0,
-        averageWaitTime: 0, // Placeholder
-        noShowRate: Math.round(noShowRate),
+        totalAppointments: appointmentCount || 0,
+        completedAppointments: completedCount,
+        noShows: noShowCount,
+        revenue: completedCount * 1000, // Mock revenue calculation
+        newPatients: newPatientCount || 0,
+        followups: followupCount || 0,
+        prescriptions: prescriptionCount || 0
       });
-    } catch (error) {
-      console.error("Error loading report data:", error);
+
+      setAppointmentsByType(typeData);
+      setAppointmentsByStatus(statusData);
+      setDailyAppointments(dailyData);
+      setTopReasons(reasonData);
+    } catch (error: any) {
+      console.error("Error loading reports:", error);
+      toast.error("Failed to load reports");
     } finally {
       setLoading(false);
     }
   };
 
+  const StatCard = ({ title, value, icon: Icon, description }: any) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+      </CardContent>
+    </Card>
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading reports...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Reports & Analytics</h1>
-          <p className="text-muted-foreground">
-            View clinic performance and analytics
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Reports & Analytics</h1>
+            <p className="text-muted-foreground">
+              Comprehensive insights into your clinic performance
+            </p>
+          </div>
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="thisMonth">This Month</SelectItem>
+              <SelectItem value="lastMonth">Last Month</SelectItem>
+              <SelectItem value="last3Months">Last 3 Months</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {loading ? (
-          <Card>
-            <CardContent className="py-12">
-              <p className="text-center text-muted-foreground">Loading reports...</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* Key Metrics */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Total Patients"
+            value={stats.totalPatients}
+            icon={Users}
+            description={`${stats.newPatients} new this period`}
+          />
+          <StatCard
+            title="Appointments"
+            value={stats.totalAppointments}
+            icon={Calendar}
+            description={`${stats.completedAppointments} completed`}
+          />
+          <StatCard
+            title="No Shows"
+            value={stats.noShows}
+            icon={Activity}
+            description={`${((stats.noShows / stats.totalAppointments) * 100 || 0).toFixed(1)}% rate`}
+          />
+          <StatCard
+            title="Revenue"
+            value={`₹${stats.revenue.toLocaleString()}`}
+            icon={DollarSign}
+            description="Based on completed"
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            title="Follow-ups"
+            value={stats.followups}
+            icon={CalendarCheck}
+            description="Scheduled this period"
+          />
+          <StatCard
+            title="Prescriptions"
+            value={stats.prescriptions}
+            icon={FileText}
+            description="Issued this period"
+          />
+          <StatCard
+            title="Completion Rate"
+            value={`${((stats.completedAppointments / stats.totalAppointments) * 100 || 0).toFixed(1)}%`}
+            icon={TrendingUp}
+            description="Of scheduled appointments"
+          />
+        </div>
+
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="patients">Patients</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-                  <Users className="h-4 w-4 text-primary" />
+                <CardHeader>
+                  <CardTitle>Appointments by Type</CardTitle>
+                  <CardDescription>Distribution of appointment types</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalPatients}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Registered in system
-                  </p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={appointmentsByType}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {appointmentsByType.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Monthly Appointments
-                  </CardTitle>
-                  <Calendar className="h-4 w-4 text-secondary" />
+                <CardHeader>
+                  <CardTitle>Appointments by Status</CardTitle>
+                  <CardDescription>Current status distribution</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.monthlyAppointments}</div>
-                  <p className="text-xs text-muted-foreground mt-1">This month</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Completed Appointments
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-success" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.completedAppointments}</div>
-                  <p className="text-xs text-muted-foreground mt-1">This month</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Pending Follow-ups
-                  </CardTitle>
-                  <Clock className="h-4 w-4 text-warning" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.pendingFollowups}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Require attention
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">No-Show Rate</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-destructive" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.noShowRate}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">This month</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Wait Time</CardTitle>
-                  <Clock className="h-4 w-4 text-info" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">—</div>
-                  <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={appointmentsByStatus}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="hsl(var(--primary))" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
 
-            {/* Performance Overview */}
+          <TabsContent value="appointments" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Performance Overview
-                </CardTitle>
+                <CardTitle>Daily Appointments Trend</CardTitle>
+                <CardDescription>Number of appointments per day</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-sm font-medium">Completion Rate</span>
-                    <span className="text-lg font-bold">
-                      {stats.monthlyAppointments > 0
-                        ? Math.round(
-                            (stats.completedAppointments / stats.monthlyAppointments) *
-                              100
-                          )
-                        : 0}
-                      %
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <span className="text-sm font-medium">Patient Retention</span>
-                    <span className="text-lg font-bold">—</span>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-sm font-medium">Average Consultation Time</span>
-                    <span className="text-lg font-bold">—</span>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={dailyAppointments}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
-          </>
-        )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Appointment Reasons</CardTitle>
+                <CardDescription>Most common reasons for visits</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topReasons} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="reason" type="category" width={150} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="hsl(var(--secondary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="patients" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Patient Growth</CardTitle>
+                <CardDescription>Coming soon: Patient registration trends and demographics</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[400px] flex items-center justify-center text-muted-foreground">
+                Patient analytics will be displayed here
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
-};
-
-export default Reports;
+}
