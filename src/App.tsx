@@ -13,6 +13,8 @@ import Appointments from "./pages/Appointments";
 import AppointmentDetail from "./pages/AppointmentDetail";
 import Queue from "./pages/Queue";
 import Followups from "./pages/Followups";
+import Waitlist from "./pages/Waitlist";
+import PrescriptionTemplates from "./pages/PrescriptionTemplates";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
@@ -40,6 +42,8 @@ const App = () => (
           <Route path="/appointments/:id" element={<AppointmentDetail />} />
           <Route path="/queue" element={<Queue />} />
           <Route path="/followups" element={<Followups />} />
+          <Route path="/waitlist" element={<Waitlist />} />
+          <Route path="/prescription-templates" element={<PrescriptionTemplates />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/users" element={<UserManagement />} />

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Clock, User } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface ConflictingAppointment {
   id: string;
@@ -51,6 +52,7 @@ export function ConflictDetectionDialog({
   const [conflicts, setConflicts] = useState<ConflictingAppointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
@@ -128,7 +130,7 @@ export function ConflictDetectionDialog({
   };
 
   const handleAddToWaitlist = () => {
-    toast.info('Waitlist feature coming soon');
+    navigate(`/waitlist?date=${date}&time=${time}&branch=${branchId}`);
     onOpenChange(false);
   };
 

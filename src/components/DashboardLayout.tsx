@@ -25,6 +25,8 @@ import {
   Building2,
   UserCog,
   ScrollText,
+  Clock,
+  Pill,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -95,8 +97,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: Users, label: "Patients", path: "/patients" },
     { icon: ClipboardList, label: "Appointments", path: "/appointments" },
-    { icon: Users, label: "Queue", path: "/queue" },
+    { icon: Clock, label: "Queue", path: "/queue" },
     { icon: Bell, label: "Follow-ups", path: "/followups" },
+    { icon: Users, label: "Waitlist", path: "/waitlist" },
+    { icon: Pill, label: "Rx Templates", path: "/prescription-templates" },
     { icon: BarChart3, label: "Reports", path: "/reports" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
