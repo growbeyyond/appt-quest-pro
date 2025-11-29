@@ -133,12 +133,40 @@ const Settings = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Clinic Settings</CardTitle>
+            <CardTitle>Clinic Management</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Additional clinic-wide settings will be available here for administrators
-            </p>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">Branch Management</p>
+                <p className="text-sm text-muted-foreground">
+                  Manage clinic branches and locations
+                </p>
+              </div>
+              <Button onClick={() => window.location.href = '/branches'}>
+                Manage Branches
+              </Button>
+            </div>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">User Management</p>
+                <p className="text-sm text-muted-foreground">
+                  Manage staff members and their roles
+                </p>
+              </div>
+              <Button onClick={() => window.location.href = '/users'}>
+                Manage Users
+              </Button>
+            </div>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium">SMS Reminders</p>
+                <p className="text-sm text-muted-foreground">
+                  Automated appointment reminders via SMS
+                </p>
+              </div>
+              <p className="text-sm text-green-600 font-medium">Active</p>
+            </div>
           </CardContent>
         </Card>
       </div>

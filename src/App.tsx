@@ -14,6 +14,8 @@ import AppointmentDetail from "./pages/AppointmentDetail";
 import Followups from "./pages/Followups";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import UserManagement from "./pages/UserManagement";
+import BranchManagement from "./pages/BranchManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,8 @@ const App = () => (
           <Route path="/followups" element={<Followups />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/branches" element={<BranchManagement />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

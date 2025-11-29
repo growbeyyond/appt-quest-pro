@@ -15,6 +15,8 @@ import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature } from
 import { useToast } from "@/hooks/use-toast";
 import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
 import { ConsentCapture } from "@/components/ConsentCapture";
+import { MedicalHistoryManager } from "@/components/MedicalHistoryManager";
+import { PrescriptionManager } from "@/components/PrescriptionManager";
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -138,6 +140,7 @@ const PatientDetail = () => {
               <TabsTrigger value="contact">Contact & Emergency</TabsTrigger>
               <TabsTrigger value="insurance">Insurance</TabsTrigger>
               {!isNew && <TabsTrigger value="photo">Photo & Consent</TabsTrigger>}
+              {!isNew && <TabsTrigger value="medical">Medical Records</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="basic">
@@ -393,6 +396,18 @@ const PatientDetail = () => {
                       )}
                     </CardContent>
                   </Card>
+                </div>
+              </TabsContent>
+            )}
+
+            {!isNew && (
+              <TabsContent value="medical">
+                <div className="space-y-6">
+                  <MedicalHistoryManager patientId={id!} />
+                  <PrescriptionManager 
+                    patientId={id!} 
+                    patientEmail={formData.email || undefined}
+                  />
                 </div>
               </TabsContent>
             )}
