@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Users, Search, UserPlus } from "lucide-react";
+import { Users, Search, UserPlus, Download, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
+import { useToast } from "@/hooks/use-toast";
 
 const Patients = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     loadPatients();
@@ -48,6 +51,110 @@ const Patients = () => {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
 
+  const handleExport = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const exportData = data.map((patient) => ({
+        "First Name": patient.first_name,
+        "Last Name": patient.last_name,
+        Phone: patient.phone,
+        Email: patient.email || "",
+        Gender: patient.gender || "",
+        "Date of Birth": patient.date_of_birth || "",
+        Address: patient.address || "",
+        "Emergency Contact Name": patient.emergency_contact_name || "",
+        "Emergency Contact Phone": patient.emergency_contact_phone || "",
+        "Insurance Provider": patient.insurance_provider || "",
+        "Insurance Number": patient.insurance_number || "",
+        Notes: patient.notes || "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Patients");
+      
+      XLSX.writeFile(wb, `patients_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported ${data.length} patients to Excel file.`,
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Could not export patient data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      const patientsToImport = jsonData.map((row: any) => ({
+        first_name: row["First Name"] || row["first_name"],
+        last_name: row["Last Name"] || row["last_name"],
+        phone: row["Phone"] || row["phone"],
+        email: row["Email"] || row["email"] || null,
+        gender: row["Gender"] || row["gender"] || null,
+        date_of_birth: row["Date of Birth"] || row["date_of_birth"] || null,
+        address: row["Address"] || row["address"] || null,
+        emergency_contact_name: row["Emergency Contact Name"] || row["emergency_contact_name"] || null,
+        emergency_contact_phone: row["Emergency Contact Phone"] || row["emergency_contact_phone"] || null,
+        insurance_provider: row["Insurance Provider"] || row["insurance_provider"] || null,
+        insurance_number: row["Insurance Number"] || row["insurance_number"] || null,
+        notes: row["Notes"] || row["notes"] || null,
+      }));
+
+      const validPatients = patientsToImport.filter(
+        (p) => p.first_name && p.last_name && p.phone
+      );
+
+      if (validPatients.length === 0) {
+        toast({
+          title: "Import Failed",
+          description: "No valid patient records found. Please ensure First Name, Last Name, and Phone are provided.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase.from("patients").insert(validPatients);
+
+      if (error) throw error;
+
+      toast({
+        title: "Import Successful",
+        description: `Successfully imported ${validPatients.length} patients.`,
+      });
+
+      loadPatients();
+    } catch (error) {
+      console.error("Import error:", error);
+      toast({
+        title: "Import Failed",
+        description: "Could not import patient data. Please check the file format.",
+        variant: "destructive",
+      });
+    }
+
+    event.target.value = "";
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -58,10 +165,28 @@ const Patients = () => {
               Manage patient records and information
             </p>
           </div>
-          <Button onClick={() => navigate("/patients/new")}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            New Patient
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <Button variant="outline" asChild>
+              <label className="cursor-pointer">
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={handleImport}
+                />
+              </label>
+            </Button>
+            <Button onClick={() => navigate("/patients/new")}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              New Patient
+            </Button>
+          </div>
         </div>
 
         <Card>
