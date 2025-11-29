@@ -22,6 +22,9 @@ import {
   LogOut,
   Menu,
   X,
+  Building2,
+  UserCog,
+  ScrollText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +35,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,6 +56,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         .eq("id", session.user.id)
         .single();
       setProfile(profileData);
+
+      // Get user role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .single();
+      setUserRole(roleData?.role || null);
     };
 
     checkUser();
@@ -78,7 +90,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     navigate("/auth");
   };
 
-  const navItems = [
+  const baseNavItems = [
     { icon: Activity, label: "Dashboard", path: "/dashboard" },
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: Users, label: "Patients", path: "/patients" },
@@ -87,6 +99,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: BarChart3, label: "Reports", path: "/reports" },
     { icon: Settings, label: "Settings", path: "/settings" },
   ];
+
+  const adminNavItems = [
+    { icon: Building2, label: "Branches", path: "/branches" },
+    { icon: UserCog, label: "Users", path: "/users" },
+    { icon: ScrollText, label: "Audit Logs", path: "/audit-logs" },
+  ];
+
+  const navItems = userRole === "admin" 
+    ? [...baseNavItems.slice(0, -1), ...adminNavItems, baseNavItems[baseNavItems.length - 1]]
+    : baseNavItems;
 
   const initials = profile?.full_name
     ?.split(" ")
