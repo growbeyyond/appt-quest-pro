@@ -120,6 +120,7 @@ const Patients = () => {
         notes: row["Notes"] || row["notes"] || null,
       }));
 
+      // Validate required fields
       const validPatients = patientsToImport.filter(
         (p) => p.first_name && p.last_name && p.phone
       );
@@ -133,13 +134,47 @@ const Patients = () => {
         return;
       }
 
+      // Check for duplicate phone numbers within the import file
+      const phoneNumbers = validPatients.map(p => p.phone);
+      const duplicatesInFile = phoneNumbers.filter((phone, index) => 
+        phoneNumbers.indexOf(phone) !== index
+      );
+
+      if (duplicatesInFile.length > 0) {
+        toast({
+          title: "Duplicate Phone Numbers Found",
+          description: `Found ${duplicatesInFile.length} duplicate phone number(s) in the file: ${[...new Set(duplicatesInFile)].join(", ")}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check for existing phone numbers in database
+      const { data: existingPatients, error: checkError } = await supabase
+        .from("patients")
+        .select("phone")
+        .in("phone", phoneNumbers);
+
+      if (checkError) throw checkError;
+
+      if (existingPatients && existingPatients.length > 0) {
+        const existingPhones = existingPatients.map(p => p.phone);
+        toast({
+          title: "Duplicate Phone Numbers Detected",
+          description: `${existingPatients.length} phone number(s) already exist in database: ${existingPhones.join(", ")}. Please remove duplicates and try again.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Proceed with import if no duplicates
       const { error } = await supabase.from("patients").insert(validPatients);
 
       if (error) throw error;
 
       toast({
         title: "Import Successful",
-        description: `Successfully imported ${validPatients.length} patients.`,
+        description: `Successfully imported ${validPatients.length} patients with no duplicates.`,
       });
 
       loadPatients();
