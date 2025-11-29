@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { RoleDescription } from "@/components/RoleDescription";
 import {
   Table,
   TableBody,
@@ -43,6 +44,7 @@ const UserManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserRole, setNewUserRole] = useState<string>("user");
   const { toast } = useToast();
 
@@ -89,17 +91,32 @@ const UserManagement = () => {
     setLoading(true);
 
     try {
-      // This would typically be done through an admin API
-      // For now, show a message that this needs backend implementation
+      const { data, error } = await supabase.functions.invoke(
+        "manage-user-roles",
+        {
+          body: {
+            action: "create_user",
+            email: newUserEmail,
+            password: newUserPassword,
+            fullName: newUserFullName || newUserEmail.split("@")[0],
+            role: newUserRole,
+          },
+        }
+      );
+
+      if (error) throw error;
+
       toast({
-        title: "Feature Coming Soon",
-        description: "User creation requires admin API implementation",
+        title: "Success",
+        description: "User created successfully",
       });
-      
+
       setDialogOpen(false);
       setNewUserEmail("");
       setNewUserPassword("");
+      setNewUserFullName("");
       setNewUserRole("user");
+      loadUsers();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -108,6 +125,33 @@ const UserManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase.functions.invoke("manage-user-roles", {
+        body: {
+          action: "change_role",
+          userId,
+          role: newRole,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+
+      loadUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -144,6 +188,15 @@ const UserManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={newUserFullName}
+                    onChange={(e) => setNewUserFullName(e.target.value)}
+                    placeholder="Leave empty to use email prefix"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
@@ -151,7 +204,11 @@ const UserManagement = () => {
                     value={newUserPassword}
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     required
+                    minLength={8}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Minimum 8 characters
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="role">Role</Label>
@@ -167,7 +224,8 @@ const UserManagement = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" disabled={loading}>
+                <RoleDescription role={newUserRole} />
+                <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Creating..." : "Create User"}
                 </Button>
               </form>
@@ -183,32 +241,67 @@ const UserManagement = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.full_name || "—"}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <span className="capitalize">{user.role}</span>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {loading && users.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading users...
+              </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No users found. Create your first user above.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.full_name || "—"}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={user.role}
+                          onValueChange={(value) => handleChangeRole(user.id, value)}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="doctor">Doctor</SelectItem>
+                            <SelectItem value="receptionist">Receptionist</SelectItem>
+                            <SelectItem value="user">User</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this user?")) {
+                              // Delete functionality to be implemented
+                              toast({
+                                title: "Coming Soon",
+                                description: "User deletion will be available soon",
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
