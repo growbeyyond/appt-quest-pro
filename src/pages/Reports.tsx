@@ -21,14 +21,54 @@ const Reports = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12">
-              <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground text-lg">
-                Reports coming soon
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                This page will display clinic analytics, revenue reports, and performance metrics
-              </p>
+            <div className="grid gap-6">
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Total Appointments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">Coming Soon</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This month
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Active Patients
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">Coming Soon</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Total registered
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">
+                      Revenue
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">Coming Soon</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This month
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">
+                  Detailed analytics and charts coming soon
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
