@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Clock, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ConflictDetectionDialog } from "@/components/ConflictDetectionDialog";
 
 const AppointmentDetail = () => {
   const { id } = useParams();
@@ -20,6 +21,8 @@ const AppointmentDetail = () => {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const [formData, setFormData] = useState({
     patient_id: "",
     branch_id: "",
@@ -82,8 +85,16 @@ const AppointmentDetail = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, forceBook = false) => {
     e.preventDefault();
+
+    // Check for conflicts if not forcing
+    if (!forceBook && formData.appointment_date && formData.appointment_time && formData.branch_id) {
+      setPendingSubmit(true);
+      setConflictDialogOpen(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -118,7 +129,13 @@ const AppointmentDetail = () => {
       });
     } finally {
       setLoading(false);
+      setPendingSubmit(false);
     }
+  };
+
+  const handleForceBook = () => {
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleSubmit(fakeEvent, true);
   };
 
   return (
@@ -324,6 +341,28 @@ const AppointmentDetail = () => {
             </Button>
           </div>
         </form>
+
+        <ConflictDetectionDialog
+          date={formData.appointment_date}
+          time={formData.appointment_time}
+          duration={formData.duration_minutes}
+          branchId={formData.branch_id}
+          excludeAppointmentId={isNew ? undefined : id}
+          open={conflictDialogOpen && pendingSubmit}
+          onOpenChange={(open) => {
+            setConflictDialogOpen(open);
+            if (!open) setPendingSubmit(false);
+          }}
+          onForceBook={handleForceBook}
+          onChangeSlot={() => {
+            setConflictDialogOpen(false);
+            setPendingSubmit(false);
+            toast({
+              title: "Pick a different time",
+              description: "Please select a different date or time slot",
+            });
+          }}
+        />
       </div>
     </DashboardLayout>
   );

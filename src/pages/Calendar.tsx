@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import FollowupPopup from "@/components/FollowupPopup";
+import { DailyFollowupPopup } from "@/components/DailyFollowupPopup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -153,15 +153,8 @@ const Calendar = () => {
   };
 
   const handleDateClick = (date: Date) => {
-    const dateFollowups = getFollowupsForDate(date);
-    const dateAppointments = appointments.filter((appt) =>
-      isSameDay(parseISO(appt.appointment_date), date)
-    );
-    
-    if (dateFollowups.length > 0 || dateAppointments.length > 0) {
-      setSelectedDate(date);
-      setFollowupPopupOpen(true);
-    }
+    setSelectedDate(date);
+    setFollowupPopupOpen(true);
   };
 
   const activeAppointment = appointments.find((a) => a.id === activeId);
@@ -368,15 +361,10 @@ const Calendar = () => {
         </Card>
       </div>
 
-      <FollowupPopup
+      <DailyFollowupPopup
+        date={format(selectedDate, 'yyyy-MM-dd')}
         open={followupPopupOpen}
         onOpenChange={setFollowupPopupOpen}
-        date={selectedDate}
-        followups={getFollowupsForDate(selectedDate)}
-        appointments={appointments.filter((appt) =>
-          isSameDay(parseISO(appt.appointment_date), selectedDate)
-        )}
-        onRefresh={loadData}
       />
     </DashboardLayout>
   );

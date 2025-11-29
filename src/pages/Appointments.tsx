@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ClipboardList, Plus, MessageCircle, UserCheck } from "lucide-react";
+import { ClipboardList, Plus, MessageCircle, UserCheck, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { CheckInDialog } from "@/components/CheckInDialog";
+import { NoShowDialog } from "@/components/NoShowDialog";
 
 const Appointments = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -18,6 +19,13 @@ const Appointments = () => {
     appointmentId: string;
     patientName: string;
   }>({ open: false, appointmentId: "", patientName: "" });
+  const [noShowDialog, setNoShowDialog] = useState<{
+    open: boolean;
+    appointmentId: string;
+    patientId: string;
+    patientName: string;
+    branchId: string;
+  }>({ open: false, appointmentId: "", patientId: "", patientName: "", branchId: "" });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,6 +84,16 @@ const Appointments = () => {
       open: true,
       appointmentId: appointment.id,
       patientName: `${appointment.patients.first_name} ${appointment.patients.last_name}`,
+    });
+  };
+
+  const openNoShowDialog = (appointment: any) => {
+    setNoShowDialog({
+      open: true,
+      appointmentId: appointment.id,
+      patientId: appointment.patient_id,
+      patientName: `${appointment.patients.first_name} ${appointment.patients.last_name}`,
+      branchId: appointment.branch_id,
     });
   };
 
@@ -150,16 +168,44 @@ const Appointments = () => {
                     <div className="flex items-center gap-2">
                       {getStatusBadge(appt.status)}
                       {appt.status === 'scheduled' && (
+                        <>
+                          <Button
+                            size="icon"
+                            variant="default"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openCheckInDialog(appt);
+                            }}
+                            title="Check in patient"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openNoShowDialog(appt);
+                            }}
+                            title="Mark as no-show"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      {(appt.status === 'checked_in' || appt.status === 'in_consultation') && (
                         <Button
                           size="icon"
-                          variant="default"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            openCheckInDialog(appt);
+                            openNoShowDialog(appt);
                           }}
-                          title="Check in patient"
+                          title="Mark as no-show"
                         >
-                          <UserCheck className="h-4 w-4" />
+                          <XCircle className="h-4 w-4" />
                         </Button>
                       )}
                       <Button
@@ -188,6 +234,16 @@ const Appointments = () => {
         patientName={checkInDialog.patientName}
         open={checkInDialog.open}
         onOpenChange={(open) => setCheckInDialog({ ...checkInDialog, open })}
+      />
+
+      <NoShowDialog
+        appointmentId={noShowDialog.appointmentId}
+        patientId={noShowDialog.patientId}
+        patientName={noShowDialog.patientName}
+        branchId={noShowDialog.branchId}
+        open={noShowDialog.open}
+        onOpenChange={(open) => setNoShowDialog({ ...noShowDialog, open })}
+        onSuccess={loadAppointments}
       />
     </DashboardLayout>
   );
