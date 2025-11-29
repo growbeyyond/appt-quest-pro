@@ -95,6 +95,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: Users, label: "Patients", path: "/patients" },
     { icon: ClipboardList, label: "Appointments", path: "/appointments" },
+    { icon: Users, label: "Queue", path: "/queue" },
     { icon: Bell, label: "Follow-ups", path: "/followups" },
     { icon: BarChart3, label: "Reports", path: "/reports" },
     { icon: Settings, label: "Settings", path: "/settings" },
