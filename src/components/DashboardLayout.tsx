@@ -29,6 +29,7 @@ import {
   Pill,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.jpeg";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -140,13 +141,20 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <Menu className="h-5 w-5" />
               )}
             </Button>
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-                <Activity className="h-6 w-6 text-primary-foreground" />
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <img 
+                src={logo} 
+                alt="Dr. Prasanna's Clinic" 
+                className="h-12 w-12 rounded-lg object-cover shadow-md"
+              />
+              <div className="hidden md:block">
+                <span className="font-bold text-lg text-primary">
+                  Dr. Prasanna's
+                </span>
+                <p className="text-xs text-secondary font-medium -mt-0.5">
+                  PCOS & Thyrocure Homeopathy
+                </p>
               </div>
-              <span className="hidden md:block font-bold text-lg">
-                Dr. Prasanna CRM
-              </span>
             </Link>
           </div>
 

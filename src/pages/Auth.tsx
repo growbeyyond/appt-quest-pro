@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, Shield, ArrowLeft, Mail } from "lucide-react";
+import { Shield, ArrowLeft, Mail } from "lucide-react";
+import logo from "@/assets/logo.jpeg";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -94,7 +95,6 @@ const Auth = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'true') {
-      // User came from reset email, show update password form
       toast({
         title: "Password Reset",
         description: "You can now sign in with your new password after setting it.",
@@ -104,15 +104,15 @@ const Auth = () => {
 
   if (showForgotPassword) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-        <Card className="w-full max-w-md shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+        <Card className="w-full max-w-md shadow-xl border-primary/20">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-4">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Mail className="h-8 w-8 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+            <CardTitle className="text-2xl font-bold text-primary">Reset Password</CardTitle>
             <CardDescription>
               {resetEmailSent 
                 ? "Check your email for reset instructions" 
@@ -122,7 +122,7 @@ const Auth = () => {
           <CardContent>
             {resetEmailSent ? (
               <div className="space-y-4">
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                <div className="p-4 bg-secondary/10 border border-secondary/30 rounded-lg text-sm text-secondary">
                   <p className="font-medium mb-1">✉️ Email Sent!</p>
                   <p>We've sent password reset instructions to <strong>{email}</strong>. Check your inbox and follow the link to reset your password.</p>
                 </div>
@@ -149,6 +149,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    className="border-primary/20 focus:border-primary"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -172,16 +173,23 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+      <Card className="w-full max-w-md shadow-xl border-primary/20">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center">
-              <Activity className="h-8 w-8 text-primary-foreground" />
-            </div>
+            <img 
+              src={logo} 
+              alt="Dr. Prasanna's PCOS & Thyrocure Homeopathy" 
+              className="h-28 w-28 rounded-2xl object-cover shadow-lg border-2 border-primary/20"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">Dr. Prasanna CRM</CardTitle>
-          <CardDescription>Healthcare appointment management system</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary">
+            Dr. Prasanna Boddupally's
+          </CardTitle>
+          <CardDescription className="text-secondary font-medium text-base">
+            PCOS & Thyrocure Homeopathy
+          </CardDescription>
+          <p className="text-sm text-muted-foreground">Clinic Management System</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignIn} className="space-y-4">
@@ -194,6 +202,7 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="border-primary/20 focus:border-primary"
               />
             </div>
             <div className="space-y-2">
@@ -214,6 +223,7 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="border-primary/20 focus:border-primary"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -221,9 +231,9 @@ const Auth = () => {
             </Button>
           </form>
           
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-primary/10">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
+              <Shield className="h-4 w-4 text-primary" />
               <span>Invitation-only access</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">

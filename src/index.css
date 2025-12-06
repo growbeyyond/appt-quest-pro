@@ -3,118 +3,118 @@
 @tailwind utilities;
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+All colors MUST be HSL - Purple & Green theme matching Dr. Prasanna's branding.
 */
 
 @layer base {
   :root {
-    /* Medical Blue Theme */
-    --background: 210 40% 98%;
-    --foreground: 215 25% 15%;
+    /* Purple & Green Theme matching logo */
+    --background: 270 20% 98%;
+    --foreground: 270 30% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 270 30% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 270 30% 15%;
 
-    /* Primary - Medical Blue */
-    --primary: 212 95% 45%;
+    /* Primary - Deep Purple from logo */
+    --primary: 270 50% 40%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 212 95% 40%;
-    --primary-light: 212 95% 95%;
+    --primary-hover: 270 50% 35%;
+    --primary-light: 270 50% 95%;
 
-    /* Secondary - Fresh Green for health indicators */
-    --secondary: 142 76% 36%;
+    /* Secondary - Fresh Green from logo leaves */
+    --secondary: 150 60% 35%;
     --secondary-foreground: 0 0% 100%;
-    --secondary-light: 142 76% 95%;
+    --secondary-light: 150 60% 95%;
 
     /* Muted backgrounds */
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 270 15% 96%;
+    --muted-foreground: 270 15% 45%;
 
-    /* Accent - Warm amber for attention */
-    --accent: 38 92% 50%;
+    /* Accent - Teal blend */
+    --accent: 160 50% 40%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 38 92% 95%;
+    --accent-light: 160 50% 95%;
 
     /* Destructive - Muted red */
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 212 95% 45%;
+    --border: 270 20% 90%;
+    --input: 270 20% 90%;
+    --ring: 270 50% 40%;
 
     --radius: 0.75rem;
 
     /* Status colors */
-    --success: 142 76% 36%;
+    --success: 150 60% 35%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 212 95% 45%;
+    --info: 200 80% 45%;
     --info-foreground: 0 0% 100%;
 
-    /* Sidebar */
-    --sidebar-background: 215 25% 15%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 212 95% 45%;
+    /* Sidebar - Dark purple */
+    --sidebar-background: 270 35% 18%;
+    --sidebar-foreground: 270 20% 98%;
+    --sidebar-primary: 150 60% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 20%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 25%;
-    --sidebar-ring: 212 95% 45%;
+    --sidebar-accent: 270 35% 25%;
+    --sidebar-accent-foreground: 270 20% 98%;
+    --sidebar-border: 270 35% 28%;
+    --sidebar-ring: 150 60% 45%;
   }
 
   .dark {
-    --background: 215 25% 12%;
-    --foreground: 210 40% 98%;
+    --background: 270 30% 10%;
+    --foreground: 270 20% 98%;
 
-    --card: 215 25% 15%;
-    --card-foreground: 210 40% 98%;
+    --card: 270 30% 14%;
+    --card-foreground: 270 20% 98%;
 
-    --popover: 215 25% 15%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 270 30% 14%;
+    --popover-foreground: 270 20% 98%;
 
-    --primary: 212 95% 50%;
+    --primary: 270 50% 55%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 212 95% 55%;
-    --primary-light: 212 95% 20%;
+    --primary-hover: 270 50% 60%;
+    --primary-light: 270 50% 20%;
 
-    --secondary: 142 76% 40%;
+    --secondary: 150 60% 45%;
     --secondary-foreground: 0 0% 100%;
-    --secondary-light: 142 76% 20%;
+    --secondary-light: 150 60% 18%;
 
-    --muted: 215 25% 20%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 270 30% 18%;
+    --muted-foreground: 270 15% 65%;
 
-    --accent: 38 92% 55%;
+    --accent: 160 50% 45%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 38 92% 20%;
+    --accent-light: 160 50% 18%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 25% 25%;
-    --input: 215 25% 25%;
-    --ring: 212 95% 50%;
+    --border: 270 30% 22%;
+    --input: 270 30% 22%;
+    --ring: 270 50% 55%;
 
-    --success: 142 76% 40%;
+    --success: 150 60% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
-    --info: 212 95% 50%;
+    --info: 200 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 215 25% 10%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 212 95% 50%;
+    --sidebar-background: 270 35% 8%;
+    --sidebar-foreground: 270 20% 98%;
+    --sidebar-primary: 150 60% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 18%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 20%;
-    --sidebar-ring: 212 95% 50%;
+    --sidebar-accent: 270 35% 15%;
+    --sidebar-accent-foreground: 270 20% 98%;
+    --sidebar-border: 270 35% 18%;
+    --sidebar-ring: 150 60% 50%;
   }
 }
 
