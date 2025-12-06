@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MessageCircle, Bell, Clock, Check } from "lucide-react";
+import { MessageCircle, Bell, Clock, Check, Send } from "lucide-react";
 import { format, addDays, isToday, isTomorrow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,8 +23,9 @@ interface Appointment {
 
 export const DashboardReminders = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
-  const [sentReminders, setSentReminders] = useState<Set<string>>(new Set());
+  const [sentReminderIds, setSentReminderIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [sendingAll, setSendingAll] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export const DashboardReminders = () => {
       const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
 
       // Get today's and tomorrow's scheduled appointments
-      const { data, error } = await supabase
+      const { data: appointments, error: apptError } = await supabase
         .from("appointments")
         .select(`
           id,
@@ -51,8 +52,23 @@ export const DashboardReminders = () => {
         .order("appointment_date", { ascending: true })
         .order("appointment_time", { ascending: true });
 
-      if (error) throw error;
-      setUpcomingAppointments(data || []);
+      if (apptError) throw apptError;
+      setUpcomingAppointments(appointments || []);
+
+      // Check which appointments already have reminders sent today
+      if (appointments && appointments.length > 0) {
+        const appointmentIds = appointments.map((a) => a.id);
+        const { data: existingReminders } = await supabase
+          .from("sms_reminders")
+          .select("appointment_id")
+          .in("appointment_id", appointmentIds)
+          .eq("reminder_type", "whatsapp")
+          .gte("created_at", format(new Date(), "yyyy-MM-dd"));
+
+        if (existingReminders) {
+          setSentReminderIds(new Set(existingReminders.map((r) => r.appointment_id)));
+        }
+      }
     } catch (error) {
       console.error("Error loading upcoming appointments:", error);
     } finally {
@@ -60,7 +76,32 @@ export const DashboardReminders = () => {
     }
   };
 
-  const handleWhatsAppReminder = (appointment: Appointment) => {
+  const recordReminderSent = async (appointment: Appointment) => {
+    const patient = appointment.patients;
+    const dateLabel = isToday(new Date(appointment.appointment_date))
+      ? "today"
+      : isTomorrow(new Date(appointment.appointment_date))
+        ? "tomorrow"
+        : format(new Date(appointment.appointment_date), "EEEE, MMMM d");
+
+    const message = `Hello ${patient.first_name}, reminder for your appointment at Dr. Prasanna Clinic ${dateLabel} at ${appointment.appointment_time}.`;
+
+    try {
+      await supabase.from("sms_reminders").insert({
+        appointment_id: appointment.id,
+        patient_id: patient.id,
+        phone_number: patient.phone,
+        message: message,
+        reminder_type: "whatsapp",
+        status: "sent",
+        sent_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error recording reminder:", error);
+    }
+  };
+
+  const handleWhatsAppReminder = async (appointment: Appointment) => {
     const patient = appointment.patients;
     if (!patient?.phone) {
       toast({
@@ -83,12 +124,48 @@ export const DashboardReminders = () => {
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
 
-    // Mark as sent locally
-    setSentReminders((prev) => new Set([...prev, appointment.id]));
+    // Record in database and update local state
+    await recordReminderSent(appointment);
+    setSentReminderIds((prev) => new Set([...prev, appointment.id]));
 
     toast({
       title: "WhatsApp opened",
       description: `Reminder prepared for ${patient.first_name}`,
+    });
+  };
+
+  const handleSendAllReminders = async () => {
+    const pendingAppointments = upcomingAppointments.filter(
+      (appt) => !sentReminderIds.has(appt.id) && appt.patients?.phone
+    );
+
+    if (pendingAppointments.length === 0) {
+      toast({
+        title: "No pending reminders",
+        description: "All reminders have already been sent",
+      });
+      return;
+    }
+
+    setSendingAll(true);
+
+    // Open WhatsApp for each pending appointment with a small delay
+    for (let i = 0; i < pendingAppointments.length; i++) {
+      const appointment = pendingAppointments[i];
+      
+      // Add delay between opening tabs to prevent browser blocking
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      await handleWhatsAppReminder(appointment);
+    }
+
+    setSendingAll(false);
+
+    toast({
+      title: "Bulk reminders sent",
+      description: `Opened WhatsApp for ${pendingAppointments.length} patients`,
     });
   };
 
@@ -111,12 +188,12 @@ export const DashboardReminders = () => {
         </Badge>
       );
     }
-    return (
-      <Badge variant="outline">
-        {format(new Date(date), "MMM d")}
-      </Badge>
-    );
+    return <Badge variant="outline">{format(new Date(date), "MMM d")}</Badge>;
   };
+
+  const pendingCount = upcomingAppointments.filter(
+    (appt) => !sentReminderIds.has(appt.id)
+  ).length;
 
   if (loading) {
     return (
@@ -155,23 +232,36 @@ export const DashboardReminders = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
           Appointment Reminders
-          <Badge variant="secondary" className="ml-auto">
-            {upcomingAppointments.length}
-          </Badge>
+          <Badge variant="secondary">{upcomingAppointments.length}</Badge>
         </CardTitle>
+        {pendingCount > 0 && (
+          <Button
+            size="sm"
+            onClick={handleSendAllReminders}
+            disabled={sendingAll}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <Send className="h-4 w-4 mr-1" />
+            {sendingAll ? "Sending..." : `Send All (${pendingCount})`}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {upcomingAppointments.map((appointment) => {
-            const isSent = sentReminders.has(appointment.id);
+            const isSent = sentReminderIds.has(appointment.id);
             return (
               <div
                 key={appointment.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                  isSent
+                    ? "border-success/30 bg-success/5"
+                    : "border-border hover:bg-muted/50"
+                }`}
               >
                 <Avatar className="h-10 w-10">
                   <AvatarFallback className="bg-primary/10 text-primary text-sm">
@@ -194,8 +284,13 @@ export const DashboardReminders = () => {
                 <Button
                   size="sm"
                   variant={isSent ? "outline" : "default"}
-                  className={isSent ? "text-success border-success" : "bg-green-600 hover:bg-green-700"}
+                  className={
+                    isSent
+                      ? "text-success border-success hover:bg-success/10"
+                      : "bg-green-600 hover:bg-green-700"
+                  }
                   onClick={() => handleWhatsAppReminder(appointment)}
+                  title={isSent ? "Reminder sent - click to resend" : "Send WhatsApp reminder"}
                 >
                   {isSent ? (
                     <Check className="h-4 w-4" />
