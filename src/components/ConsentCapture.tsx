@@ -44,25 +44,25 @@ export const ConsentCapture: React.FC<ConsentCaptureProps> = ({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // Get signed URL for private bucket
+      const { data: signedUrlData } = await supabase.storage
         .from('patient-files')
-        .getPublicUrl(consentPath);
+        .createSignedUrl(consentPath, 60 * 60 * 24 * 365); // 1 year for consent docs
 
-      // Update patient record
+      // Store the file path for later signed URL generation
       const { error: updateError } = await supabase
         .from('patients')
         .update({
           consent_signed: true,
           consent_signed_at: new Date().toISOString(),
-          consent_document_url: urlData.publicUrl,
+          consent_document_url: consentPath,
         })
         .eq('id', patientId);
 
       if (updateError) throw updateError;
 
       toast.success('Consent captured successfully');
-      onConsentComplete(urlData.publicUrl);
+      onConsentComplete(signedUrlData?.signedUrl || consentPath);
       onOpenChange(false);
       setAgreed(false);
     } catch (error) {

@@ -66,28 +66,32 @@ export const PatientPhotoUpload: React.FC<PatientPhotoUploadProps> = ({
 
       if (thumbError) throw thumbError;
 
-      // Get public URLs
-      const { data: photoData } = supabase.storage
+      // Get signed URLs for private bucket
+      const { data: photoSignedUrl } = await supabase.storage
         .from('patient-files')
-        .getPublicUrl(photoPath);
+        .createSignedUrl(photoPath, 60 * 60 * 24 * 7); // 7 days
 
-      const { data: thumbData } = supabase.storage
+      const { data: thumbSignedUrl } = await supabase.storage
         .from('patient-files')
-        .getPublicUrl(thumbnailPath);
+        .createSignedUrl(thumbnailPath, 60 * 60 * 24 * 7); // 7 days
 
-      // Update patient record
+      if (!photoSignedUrl?.signedUrl || !thumbSignedUrl?.signedUrl) {
+        throw new Error('Failed to generate signed URLs');
+      }
+
+      // Store the file path (not URL) for later signed URL generation
       const { error: updateError } = await supabase
         .from('patients')
         .update({
-          photo_url: `${photoData.publicUrl}?t=${timestamp}`,
-          photo_thumbnail_url: `${thumbData.publicUrl}?t=${timestamp}`,
+          photo_url: photoPath,
+          photo_thumbnail_url: thumbnailPath,
         })
         .eq('id', patientId);
 
       if (updateError) throw updateError;
 
       toast.success('Photo uploaded successfully');
-      onUploadComplete(photoData.publicUrl, thumbData.publicUrl);
+      onUploadComplete(photoSignedUrl.signedUrl, thumbSignedUrl.signedUrl);
       onOpenChange(false);
       setSelectedImage(null);
     } catch (error) {
