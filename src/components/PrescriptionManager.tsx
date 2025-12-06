@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pill, Printer, MessageCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo.jpeg";
 
 interface Prescription {
   id: string;
@@ -199,22 +200,113 @@ export const PrescriptionManager = ({
       return;
     }
 
-    // Build prescription message
+    // Build prescription message with clinic branding
     const medications = prescription.prescription_items
       .map((item, idx) => 
-        `${idx + 1}. ${item.drug_name} - ${item.dosage}\n   ${item.frequency} for ${item.duration}${item.instructions ? `\n   (${item.instructions})` : ''}`
+        `${idx + 1}. *${item.drug_name}* - ${item.dosage}\n   ${item.frequency} for ${item.duration}${item.instructions ? `\n   _(${item.instructions})_` : ""}`
       )
-      .join('\n\n');
+      .join("\n\n");
 
-    const message = `*Prescription from Dr. Prasanna Clinic*\n\nDate: ${new Date(prescription.prescribed_date).toLocaleDateString()}\nPatient: ${patientName || 'Patient'}${prescription.diagnosis ? `\nDiagnosis: ${prescription.diagnosis}` : ''}\n\n*Medications:*\n${medications}${prescription.notes ? `\n\n*Notes:* ${prescription.notes}` : ''}\n\n---\nFor any queries, please contact the clinic.`;
+    const message = `🌿 *Dr. Prasanna Boddupally's*\n*PCOS & Thyrocure Homeopathy*\n━━━━━━━━━━━━━━━\n\n📋 *PRESCRIPTION*\n\n📅 Date: ${new Date(prescription.prescribed_date).toLocaleDateString()}\n👤 Patient: ${patientName || "Patient"}${prescription.diagnosis ? `\n🔬 Diagnosis: ${prescription.diagnosis}` : ""}\n\n💊 *Medications:*\n${medications}${prescription.notes ? `\n\n📝 *Notes:* ${prescription.notes}` : ""}\n\n━━━━━━━━━━━━━━━\n_For queries, contact the clinic._\n🌐 Homeopathy for PCOS & Thyroid`;
 
-    const whatsappUrl = `https://wa.me/${patientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    const whatsappUrl = `https://wa.me/${patientPhone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
 
     toast({
       title: "WhatsApp opened",
       description: "Prescription message prepared for sending",
     });
+  };
+
+  const handlePrint = (prescription: Prescription) => {
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Prescription - Dr. Prasanna Boddupally</title>
+        <style>
+          @page { margin: 20mm; }
+          body { font-family: 'Georgia', serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+          .header { text-align: center; border-bottom: 3px solid #6b21a8; padding-bottom: 20px; margin-bottom: 30px; }
+          .logo-section { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 10px; }
+          .logo { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; }
+          .clinic-name { color: #6b21a8; font-size: 28px; font-weight: bold; margin: 0; }
+          .clinic-subtitle { color: #16a34a; font-size: 16px; font-weight: 600; margin: 5px 0 0 0; }
+          .clinic-tagline { color: #666; font-size: 12px; margin-top: 5px; }
+          .rx-symbol { font-size: 40px; color: #6b21a8; font-weight: bold; margin: 20px 0; }
+          .patient-info { background: #f8f7ff; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #6b21a8; }
+          .patient-info p { margin: 5px 0; }
+          .medications { margin: 25px 0; }
+          .medication { background: #fff; border: 1px solid #e5e5e5; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #16a34a; }
+          .drug-name { font-weight: bold; color: #6b21a8; font-size: 16px; margin-bottom: 5px; }
+          .drug-details { color: #555; font-size: 14px; }
+          .drug-instructions { color: #16a34a; font-style: italic; font-size: 13px; margin-top: 5px; }
+          .notes { background: #f0fdf4; padding: 15px; border-radius: 8px; margin-top: 25px; border-left: 4px solid #16a34a; }
+          .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e5e5; color: #666; font-size: 12px; }
+          .signature-line { margin-top: 50px; text-align: right; }
+          .signature-line p { margin: 5px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo-section">
+            <img src="${logo}" class="logo" alt="Clinic Logo" />
+            <div>
+              <h1 class="clinic-name">Dr. Prasanna Boddupally's</h1>
+              <p class="clinic-subtitle">PCOS & Thyrocure Homeopathy</p>
+            </div>
+          </div>
+          <p class="clinic-tagline">Specialized Homeopathic Treatment for PCOS & Thyroid Disorders</p>
+        </div>
+        
+        <div class="rx-symbol">℞</div>
+        
+        <div class="patient-info">
+          <p><strong>Patient:</strong> ${patientName || "Patient"}</p>
+          <p><strong>Date:</strong> ${new Date(prescription.prescribed_date).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</p>
+          ${prescription.diagnosis ? `<p><strong>Diagnosis:</strong> ${prescription.diagnosis}</p>` : ""}
+        </div>
+        
+        <div class="medications">
+          <h3 style="color: #6b21a8; margin-bottom: 15px;">Medications</h3>
+          ${prescription.prescription_items.map((item, idx) => `
+            <div class="medication">
+              <div class="drug-name">${idx + 1}. ${item.drug_name}</div>
+              <div class="drug-details">${item.dosage} • ${item.frequency} • ${item.duration}</div>
+              ${item.instructions ? `<div class="drug-instructions">${item.instructions}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+        
+        ${prescription.notes ? `
+          <div class="notes">
+            <strong>Notes:</strong> ${prescription.notes}
+          </div>
+        ` : ""}
+        
+        <div class="signature-line">
+          <p>_____________________________</p>
+          <p><strong>Dr. Prasanna Boddupally</strong></p>
+          <p>PCOS & Thyrocure Homeopathy</p>
+        </div>
+        
+        <div class="footer">
+          <p>This prescription is computer-generated and valid without signature for homeopathic medicines.</p>
+          <p>For any queries, please contact the clinic.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
   };
 
   return (
@@ -395,7 +487,12 @@ export const PrescriptionManager = ({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" title="Print prescription">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      title="Print prescription"
+                      onClick={() => handlePrint(prescription)}
+                    >
                       <Printer className="h-4 w-4" />
                     </Button>
                     <Button

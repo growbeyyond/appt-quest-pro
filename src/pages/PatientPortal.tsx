@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import logo from "@/assets/logo.jpeg";
 
 export default function PatientPortal() {
   const [searchParams] = useSearchParams();
@@ -140,8 +141,79 @@ export default function PatientPortal() {
     }
   };
 
-  const downloadPrescription = async (prescriptionId: string) => {
-    toast.info("Prescription download will be implemented with PDF generation");
+  const downloadPrescription = async (prescription: any) => {
+    const patientName = `${patient.first_name} ${patient.last_name}`;
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Prescription - Dr. Prasanna Boddupally</title>
+        <style>
+          @page { margin: 20mm; }
+          body { font-family: 'Georgia', serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+          .header { text-align: center; border-bottom: 3px solid #6b21a8; padding-bottom: 20px; margin-bottom: 30px; }
+          .clinic-name { color: #6b21a8; font-size: 28px; font-weight: bold; margin: 0; }
+          .clinic-subtitle { color: #16a34a; font-size: 16px; font-weight: 600; margin: 5px 0 0 0; }
+          .rx-symbol { font-size: 40px; color: #6b21a8; font-weight: bold; margin: 20px 0; }
+          .patient-info { background: #f8f7ff; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 4px solid #6b21a8; }
+          .patient-info p { margin: 5px 0; }
+          .medications { margin: 25px 0; }
+          .medication { background: #fff; border: 1px solid #e5e5e5; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #16a34a; }
+          .drug-name { font-weight: bold; color: #6b21a8; font-size: 16px; margin-bottom: 5px; }
+          .drug-details { color: #555; font-size: 14px; }
+          .drug-instructions { color: #16a34a; font-style: italic; font-size: 13px; margin-top: 5px; }
+          .notes { background: #f0fdf4; padding: 15px; border-radius: 8px; margin-top: 25px; border-left: 4px solid #16a34a; }
+          .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e5e5; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1 class="clinic-name">Dr. Prasanna Boddupally's</h1>
+          <p class="clinic-subtitle">PCOS & Thyrocure Homeopathy</p>
+        </div>
+        
+        <div class="rx-symbol">℞</div>
+        
+        <div class="patient-info">
+          <p><strong>Patient:</strong> ${patientName}</p>
+          <p><strong>Date:</strong> ${format(new Date(prescription.prescribed_date), "MMMM d, yyyy")}</p>
+          ${prescription.diagnosis ? `<p><strong>Diagnosis:</strong> ${prescription.diagnosis}</p>` : ""}
+        </div>
+        
+        <div class="medications">
+          <h3 style="color: #6b21a8; margin-bottom: 15px;">Medications</h3>
+          ${prescription.prescription_items.map((item: any, idx: number) => `
+            <div class="medication">
+              <div class="drug-name">${idx + 1}. ${item.drug_name}</div>
+              <div class="drug-details">${item.dosage} • ${item.frequency} • ${item.duration}</div>
+              ${item.instructions ? `<div class="drug-instructions">${item.instructions}</div>` : ""}
+            </div>
+          `).join("")}
+        </div>
+        
+        ${prescription.notes ? `
+          <div class="notes">
+            <strong>Notes:</strong> ${prescription.notes}
+          </div>
+        ` : ""}
+        
+        <div class="footer">
+          <p>For any queries, please contact the clinic.</p>
+          <p>🌿 PCOS & Thyrocure Homeopathy</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
   };
 
   const handleLogout = () => {
@@ -150,9 +222,10 @@ export default function PatientPortal() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <img src={logo} alt="Clinic Logo" className="h-20 w-20 mx-auto rounded-2xl shadow-lg mb-4" />
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading your portal...</p>
         </div>
       </div>
@@ -161,10 +234,11 @@ export default function PatientPortal() {
 
   if (!patient) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Access Denied</CardTitle>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10">
+        <Card className="w-full max-w-md border-primary/20 shadow-xl">
+          <CardHeader className="text-center">
+            <img src={logo} alt="Clinic Logo" className="h-20 w-20 mx-auto rounded-2xl shadow-lg mb-4" />
+            <CardTitle className="text-primary">Access Denied</CardTitle>
             <CardDescription>Invalid or expired access token</CardDescription>
           </CardHeader>
         </Card>
@@ -173,16 +247,19 @@ export default function PatientPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      <header className="border-b border-primary/20 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Patient Portal</h1>
-            <p className="text-sm text-muted-foreground">
-              Welcome, {patient.first_name} {patient.last_name}
-            </p>
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="Clinic Logo" className="h-14 w-14 rounded-xl shadow-md" />
+            <div>
+              <h1 className="text-xl font-bold text-primary">Patient Portal</h1>
+              <p className="text-sm text-secondary font-medium">
+                Welcome, {patient.first_name} {patient.last_name}
+              </p>
+            </div>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="border-primary/30">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -191,25 +268,25 @@ export default function PatientPortal() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="appointments" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="appointments">
+          <TabsList className="bg-card border border-primary/20">
+            <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Calendar className="mr-2 h-4 w-4" />
               Appointments
             </TabsTrigger>
-            <TabsTrigger value="prescriptions">
+            <TabsTrigger value="prescriptions" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="mr-2 h-4 w-4" />
               Prescriptions
             </TabsTrigger>
-            <TabsTrigger value="reschedule">
+            <TabsTrigger value="reschedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Clock className="mr-2 h-4 w-4" />
-              Reschedule Requests
+              Reschedule
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="appointments" className="space-y-4">
-            <Card>
+            <Card className="border-primary/20">
               <CardHeader>
-                <CardTitle>Your Appointments</CardTitle>
+                <CardTitle className="text-primary">Your Appointments</CardTitle>
                 <CardDescription>View your upcoming and past appointments</CardDescription>
               </CardHeader>
               <CardContent>
@@ -218,7 +295,7 @@ export default function PatientPortal() {
                 ) : (
                   <div className="space-y-4">
                     {appointments.map((apt) => (
-                      <Card key={apt.id}>
+                      <Card key={apt.id} className="border-secondary/20">
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
@@ -230,7 +307,9 @@ export default function PatientPortal() {
                                 }>
                                   {apt.status}
                                 </Badge>
-                                <Badge variant="outline">{apt.appointment_type}</Badge>
+                                <Badge variant="outline" className="border-secondary/50 text-secondary">
+                                  {apt.appointment_type}
+                                </Badge>
                               </div>
                               <p className="font-medium">
                                 {format(new Date(apt.appointment_date), "MMMM d, yyyy")} at {apt.appointment_time}
@@ -244,6 +323,7 @@ export default function PatientPortal() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRescheduleRequest(apt.id)}
+                                className="border-primary/30"
                               >
                                 Request Reschedule
                               </Button>
@@ -259,9 +339,9 @@ export default function PatientPortal() {
           </TabsContent>
 
           <TabsContent value="prescriptions" className="space-y-4">
-            <Card>
+            <Card className="border-primary/20">
               <CardHeader>
-                <CardTitle>Your Prescriptions</CardTitle>
+                <CardTitle className="text-primary">Your Prescriptions</CardTitle>
                 <CardDescription>View and download your prescriptions</CardDescription>
               </CardHeader>
               <CardContent>
@@ -270,11 +350,11 @@ export default function PatientPortal() {
                 ) : (
                   <div className="space-y-4">
                     {prescriptions.map((rx) => (
-                      <Card key={rx.id}>
+                      <Card key={rx.id} className="border-secondary/20">
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between mb-4">
                             <div>
-                              <p className="font-medium">
+                              <p className="font-medium text-primary">
                                 {format(new Date(rx.prescribed_date), "MMMM d, yyyy")}
                               </p>
                               {rx.diagnosis && (
@@ -284,22 +364,23 @@ export default function PatientPortal() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => downloadPrescription(rx.id)}
+                              onClick={() => downloadPrescription(rx)}
+                              className="border-secondary/30 text-secondary hover:bg-secondary/10"
                             >
                               <Download className="mr-2 h-4 w-4" />
                               Download
                             </Button>
                           </div>
                           <div className="space-y-2">
-                            <p className="text-sm font-medium">Medications:</p>
+                            <p className="text-sm font-medium text-primary">Medications:</p>
                             {rx.prescription_items?.map((item: any) => (
-                              <div key={item.id} className="text-sm bg-muted p-3 rounded-lg">
-                                <p className="font-medium">{item.drug_name}</p>
+                              <div key={item.id} className="text-sm bg-primary/5 p-3 rounded-lg border border-primary/10">
+                                <p className="font-medium text-primary">{item.drug_name}</p>
                                 <p className="text-muted-foreground">
                                   {item.dosage} - {item.frequency} - {item.duration}
                                 </p>
                                 {item.instructions && (
-                                  <p className="text-muted-foreground text-xs mt-1">{item.instructions}</p>
+                                  <p className="text-secondary text-xs mt-1">{item.instructions}</p>
                                 )}
                               </div>
                             ))}
@@ -315,9 +396,9 @@ export default function PatientPortal() {
 
           <TabsContent value="reschedule" className="space-y-4">
             {rescheduleForm.appointmentId && (
-              <Card>
+              <Card className="border-primary/20">
                 <CardHeader>
-                  <CardTitle>Request Reschedule</CardTitle>
+                  <CardTitle className="text-primary">Request Reschedule</CardTitle>
                   <CardDescription>Submit a request to reschedule your appointment</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -328,6 +409,7 @@ export default function PatientPortal() {
                         type="date"
                         value={rescheduleForm.requestedDate}
                         onChange={(e) => setRescheduleForm({ ...rescheduleForm, requestedDate: e.target.value })}
+                        className="border-primary/20"
                       />
                     </div>
                     <div className="space-y-2">
@@ -336,6 +418,7 @@ export default function PatientPortal() {
                         type="time"
                         value={rescheduleForm.requestedTime}
                         onChange={(e) => setRescheduleForm({ ...rescheduleForm, requestedTime: e.target.value })}
+                        className="border-primary/20"
                       />
                     </div>
                   </div>
@@ -345,6 +428,7 @@ export default function PatientPortal() {
                       value={rescheduleForm.reason}
                       onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
                       placeholder="Please explain why you need to reschedule..."
+                      className="border-primary/20"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -360,9 +444,9 @@ export default function PatientPortal() {
               </Card>
             )}
 
-            <Card>
+            <Card className="border-primary/20">
               <CardHeader>
-                <CardTitle>Your Reschedule Requests</CardTitle>
+                <CardTitle className="text-primary">Your Reschedule Requests</CardTitle>
                 <CardDescription>Track the status of your reschedule requests</CardDescription>
               </CardHeader>
               <CardContent>
@@ -371,7 +455,7 @@ export default function PatientPortal() {
                 ) : (
                   <div className="space-y-4">
                     {rescheduleRequests.map((req) => (
-                      <Card key={req.id}>
+                      <Card key={req.id} className="border-secondary/20">
                         <CardContent className="pt-6">
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
@@ -387,7 +471,7 @@ export default function PatientPortal() {
                               </p>
                               <p className="text-sm text-muted-foreground">{req.reason}</p>
                               {req.notes && (
-                                <p className="text-sm text-muted-foreground">Staff Notes: {req.notes}</p>
+                                <p className="text-sm text-secondary">Staff Notes: {req.notes}</p>
                               )}
                             </div>
                           </div>
@@ -401,6 +485,15 @@ export default function PatientPortal() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <footer className="border-t border-primary/20 py-6 mt-8">
+        <div className="container mx-auto px-4 text-center">
+          <img src={logo} alt="Clinic Logo" className="h-12 w-12 mx-auto rounded-xl shadow-md mb-3" />
+          <p className="text-primary font-semibold">Dr. Prasanna Boddupally's</p>
+          <p className="text-secondary text-sm">PCOS & Thyrocure Homeopathy</p>
+          <p className="text-muted-foreground text-xs mt-2">For any queries, please contact the clinic.</p>
+        </div>
+      </footer>
     </div>
   );
 }
