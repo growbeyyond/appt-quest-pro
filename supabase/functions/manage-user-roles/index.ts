@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ManageRoleRequest {
-  action: "create_user" | "assign_role" | "remove_role" | "change_role";
+  action: "create_user" | "assign_role" | "remove_role" | "change_role" | "delete_user" | "delete_all_users";
   userId?: string;
   email?: string;
   password?: string;
@@ -165,6 +165,38 @@ serve(async (req) => {
 
         result = { success: true };
         console.log("Role removed from user:", userId);
+        break;
+      }
+
+      case "delete_user": {
+        if (!userId) {
+          throw new Error("Missing userId");
+        }
+
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        if (deleteError) throw deleteError;
+
+        result = { success: true };
+        console.log("User deleted:", userId);
+        break;
+      }
+
+      case "delete_all_users": {
+        const { data: allUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        const deletedUsers: string[] = [];
+        for (const u of allUsers.users) {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(u.id);
+          if (deleteError) {
+            console.error("Failed to delete user:", u.id, deleteError);
+          } else {
+            deletedUsers.push(u.email || u.id);
+          }
+        }
+
+        result = { success: true, deletedCount: deletedUsers.length, deletedUsers };
+        console.log("All users deleted:", deletedUsers);
         break;
       }
 
