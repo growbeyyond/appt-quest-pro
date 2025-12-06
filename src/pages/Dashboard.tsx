@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DashboardReminders } from "@/components/DashboardReminders";
 import {
   Calendar,
   Users,
@@ -253,6 +254,9 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Appointment Reminders */}
+      <DashboardReminders />
 
       {/* Pending Follow-ups */}
       {followups.length > 0 && (
@@ -510,6 +514,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Appointment Reminders */}
+        <DashboardReminders />
       </>
     );
   };
