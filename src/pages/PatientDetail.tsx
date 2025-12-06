@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
 import { ConsentCapture } from "@/components/ConsentCapture";
 import { MedicalHistoryManager } from "@/components/MedicalHistoryManager";
@@ -47,6 +48,11 @@ const PatientDetail = () => {
     consent_document_url: null as string | null,
     consent_signed_at: null as string | null,
   });
+
+  // Get signed URLs for private storage files
+  const { signedUrl: photoSignedUrl } = useSignedUrl('patient-files', formData.photo_url);
+  const { signedUrl: thumbnailSignedUrl } = useSignedUrl('patient-files', formData.photo_thumbnail_url);
+  const { signedUrl: consentSignedUrl } = useSignedUrl('patient-files', formData.consent_document_url);
 
   useEffect(() => {
     if (!isNew && id) {
@@ -185,8 +191,8 @@ const PatientDetail = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-4 mb-6">
                     <Avatar className="h-20 w-20">
-                      {formData.photo_thumbnail_url && (
-                        <AvatarImage src={formData.photo_thumbnail_url} alt={`${formData.first_name} ${formData.last_name}`} />
+                      {thumbnailSignedUrl && (
+                        <AvatarImage src={thumbnailSignedUrl} alt={`${formData.first_name} ${formData.last_name}`} />
                       )}
                       <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                         {getInitials() || "?"}
@@ -371,8 +377,8 @@ const PatientDetail = () => {
                     <CardContent className="space-y-4">
                       <div className="flex flex-col items-center gap-4">
                         <Avatar className="h-40 w-40">
-                          {formData.photo_url && (
-                            <AvatarImage src={formData.photo_url} alt={`${formData.first_name} ${formData.last_name}`} />
+                          {photoSignedUrl && (
+                            <AvatarImage src={photoSignedUrl} alt={`${formData.first_name} ${formData.last_name}`} />
                           )}
                           <AvatarFallback className="bg-primary text-primary-foreground text-5xl">
                             {getInitials() || "?"}
@@ -405,9 +411,9 @@ const PatientDetail = () => {
                           <p className="text-sm text-muted-foreground">
                             Signed on: {formData.consent_signed_at ? new Date(formData.consent_signed_at).toLocaleDateString() : "N/A"}
                           </p>
-                          {formData.consent_document_url && (
+                          {consentSignedUrl && (
                             <Button variant="outline" className="w-full" asChild>
-                              <a href={formData.consent_document_url} target="_blank" rel="noopener noreferrer">
+                              <a href={consentSignedUrl} target="_blank" rel="noopener noreferrer">
                                 View Signature
                               </a>
                             </Button>
