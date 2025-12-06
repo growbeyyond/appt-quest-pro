@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Pill, Printer, Mail, Trash2 } from "lucide-react";
+import { Plus, Pill, Printer, MessageCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Prescription {
@@ -36,13 +36,15 @@ interface PrescriptionItem {
 
 interface PrescriptionManagerProps {
   patientId: string;
-  patientEmail?: string;
+  patientName?: string;
+  patientPhone?: string;
   appointmentId?: string;
 }
 
 export const PrescriptionManager = ({
   patientId,
-  patientEmail,
+  patientName,
+  patientPhone,
   appointmentId,
 }: PrescriptionManagerProps) => {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -187,37 +189,32 @@ export const PrescriptionManager = ({
     }
   };
 
-  const handleEmailPrescription = async (prescriptionId: string) => {
-    if (!patientEmail) {
+  const handleWhatsAppShare = (prescription: Prescription) => {
+    if (!patientPhone) {
       toast({
         title: "Error",
-        description: "Patient email not available",
+        description: "Patient phone number not available",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      const { error } = await supabase.functions.invoke(
-        "send-prescription-email",
-        {
-          body: { prescriptionId, patientEmail },
-        }
-      );
+    // Build prescription message
+    const medications = prescription.prescription_items
+      .map((item, idx) => 
+        `${idx + 1}. ${item.drug_name} - ${item.dosage}\n   ${item.frequency} for ${item.duration}${item.instructions ? `\n   (${item.instructions})` : ''}`
+      )
+      .join('\n\n');
 
-      if (error) throw error;
+    const message = `*Prescription from Dr. Prasanna Clinic*\n\nDate: ${new Date(prescription.prescribed_date).toLocaleDateString()}\nPatient: ${patientName || 'Patient'}${prescription.diagnosis ? `\nDiagnosis: ${prescription.diagnosis}` : ''}\n\n*Medications:*\n${medications}${prescription.notes ? `\n\n*Notes:* ${prescription.notes}` : ''}\n\n---\nFor any queries, please contact the clinic.`;
 
-      toast({
-        title: "Success",
-        description: "Prescription sent via email",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+    const whatsappUrl = `https://wa.me/${patientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+
+    toast({
+      title: "WhatsApp opened",
+      description: "Prescription message prepared for sending",
+    });
   };
 
   return (
@@ -398,15 +395,17 @@ export const PrescriptionManager = ({
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" title="Print prescription">
                       <Printer className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleEmailPrescription(prescription.id)}
+                      onClick={() => handleWhatsAppShare(prescription)}
+                      title="Share via WhatsApp"
+                      className="text-green-600 hover:text-green-700"
                     >
-                      <Mail className="h-4 w-4" />
+                      <MessageCircle className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

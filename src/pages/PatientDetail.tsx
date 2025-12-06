@@ -443,7 +443,8 @@ const PatientDetail = () => {
                   <MedicalHistoryManager patientId={id!} />
                   <PrescriptionManager 
                     patientId={id!} 
-                    patientEmail={formData.email || undefined}
+                    patientName={`${formData.first_name} ${formData.last_name}`}
+                    patientPhone={formData.phone || undefined}
                   />
                 </div>
               </TabsContent>
