@@ -112,6 +112,14 @@ serve(async (req) => {
 
         console.log("Profile created for user:", newUser.user.id);
 
+        // Validate role is a valid app_role enum value
+        const validRoles = ['admin', 'doctor', 'receptionist'];
+        if (!validRoles.includes(role)) {
+          console.error("Invalid role:", role);
+          await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+          throw new Error(`Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}`);
+        }
+
         // Assign role
         const { error: roleError } = await supabaseAdmin
           .from("user_roles")
