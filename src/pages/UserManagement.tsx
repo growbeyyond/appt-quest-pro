@@ -45,7 +45,7 @@ const UserManagement = () => {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
-  const [newUserRole, setNewUserRole] = useState<string>("user");
+  const [newUserRole, setNewUserRole] = useState<string>("receptionist");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -220,7 +220,6 @@ const UserManagement = () => {
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="doctor">Doctor</SelectItem>
                       <SelectItem value="receptionist">Receptionist</SelectItem>
-                      <SelectItem value="user">User</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -276,7 +275,6 @@ const UserManagement = () => {
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="doctor">Doctor</SelectItem>
                             <SelectItem value="receptionist">Receptionist</SelectItem>
-                            <SelectItem value="user">User</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
