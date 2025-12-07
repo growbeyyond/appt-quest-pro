@@ -87,7 +87,30 @@ serve(async (req) => {
           },
         });
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error("Error creating user in auth:", createError);
+          throw createError;
+        }
+
+        console.log("User created in auth:", newUser.user.id);
+
+        // Create profile entry
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .insert({
+            id: newUser.user.id,
+            email: email,
+            full_name: fullName,
+          });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          // Try to clean up the auth user if profile creation fails
+          await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+          throw new Error(`Failed to create profile: ${profileError.message}`);
+        }
+
+        console.log("Profile created for user:", newUser.user.id);
 
         // Assign role
         const { error: roleError } = await supabaseAdmin
@@ -97,10 +120,15 @@ serve(async (req) => {
             role: role,
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error("Error assigning role:", roleError);
+          // Clean up on failure
+          await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+          throw new Error(`Failed to assign role: ${roleError.message}`);
+        }
 
+        console.log("Role assigned to user:", newUser.user.id);
         result = { userId: newUser.user.id, email: newUser.user.email };
-        console.log("User created:", newUser.user.id);
         break;
       }
 
