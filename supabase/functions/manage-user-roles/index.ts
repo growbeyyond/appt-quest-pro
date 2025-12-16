@@ -100,8 +100,20 @@ serve(async (req) => {
 
         console.log("User created in auth:", newUser.user.id);
         // Note: Profile is automatically created by the handle_new_user database trigger
+        // Note: handle_new_user_role trigger auto-assigns 'receptionist' role
 
-        // Assign role
+        // Update role if different from auto-assigned 'receptionist'
+        // First delete existing role, then insert new one
+        const { error: deleteRoleError } = await supabaseAdmin
+          .from("user_roles")
+          .delete()
+          .eq("user_id", newUser.user.id);
+
+        if (deleteRoleError) {
+          console.error("Error clearing existing role:", deleteRoleError);
+        }
+
+        // Assign the requested role
         const { error: roleError } = await supabaseAdmin
           .from("user_roles")
           .insert({
