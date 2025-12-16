@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Calendar, Users, CalendarCheck, DollarSign, TrendingUp, FileText, Activity } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Calendar, Users, CalendarCheck, DollarSign, TrendingUp, FileText, Activity, Download } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, eachMonthOfInterval, startOfDay } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 
@@ -28,6 +29,8 @@ export default function Reports() {
   const [appointmentsByStatus, setAppointmentsByStatus] = useState<any[]>([]);
   const [dailyAppointments, setDailyAppointments] = useState<any[]>([]);
   const [topReasons, setTopReasons] = useState<any[]>([]);
+  const [patientGrowth, setPatientGrowth] = useState<any[]>([]);
+  const [branchStats, setBranchStats] = useState<any[]>([]);
 
   useEffect(() => {
     loadReports();
@@ -50,18 +53,22 @@ export default function Reports() {
         start = startOfMonth(subMonths(now, 3));
         end = endOfMonth(now);
         break;
+      case "last6Months":
+        start = startOfMonth(subMonths(now, 6));
+        end = endOfMonth(now);
+        break;
       default:
         start = startOfMonth(now);
         end = endOfMonth(now);
     }
 
-    return { start: format(start, "yyyy-MM-dd"), end: format(end, "yyyy-MM-dd") };
+    return { start: format(start, "yyyy-MM-dd"), end: format(end, "yyyy-MM-dd"), startDate: start, endDate: end };
   };
 
   const loadReports = async () => {
     try {
       setLoading(true);
-      const { start, end } = getDateRangeFilter();
+      const { start, end, startDate, endDate } = getDateRangeFilter();
 
       // Total patients
       const { count: patientCount } = await supabase
@@ -75,15 +82,56 @@ export default function Reports() {
         .gte("created_at", start)
         .lte("created_at", end);
 
+      // Patient growth data
+      const { data: patientsData } = await supabase
+        .from("patients")
+        .select("created_at")
+        .gte("created_at", format(subMonths(new Date(), 6), "yyyy-MM-dd"));
+
+      // Calculate patient growth by month
+      const months = eachMonthOfInterval({ start: subMonths(new Date(), 5), end: new Date() });
+      const growthData = months.map(month => {
+        const monthStart = startOfMonth(month);
+        const monthEnd = endOfMonth(month);
+        const count = patientsData?.filter(p => {
+          const date = new Date(p.created_at);
+          return date >= monthStart && date <= monthEnd;
+        }).length || 0;
+        return {
+          month: format(month, "MMM yyyy"),
+          patients: count,
+        };
+      });
+      setPatientGrowth(growthData);
+
       // Appointments stats
       const { data: appointments, count: appointmentCount } = await supabase
         .from("appointments")
-        .select("*", { count: "exact" })
+        .select("*, branches(name)", { count: "exact" })
         .gte("appointment_date", start)
         .lte("appointment_date", end);
 
       const completedCount = appointments?.filter(a => a.status === "completed").length || 0;
       const noShowCount = appointments?.filter(a => a.status === "no_show").length || 0;
+
+      // Branch-wise stats
+      const branchData = appointments?.reduce((acc: any, apt) => {
+        const branchName = apt.branches?.name || "Unknown";
+        if (!acc[branchName]) {
+          acc[branchName] = { total: 0, completed: 0, noShow: 0 };
+        }
+        acc[branchName].total++;
+        if (apt.status === "completed") acc[branchName].completed++;
+        if (apt.status === "no_show") acc[branchName].noShow++;
+        return acc;
+      }, {});
+      const branchStatsData = Object.entries(branchData || {}).map(([name, stats]: [string, any]) => ({
+        name,
+        total: stats.total,
+        completed: stats.completed,
+        noShow: stats.noShow,
+      }));
+      setBranchStats(branchStatsData);
 
       // Appointments by type
       const typeStats = appointments?.reduce((acc: any, apt) => {
@@ -158,6 +206,51 @@ export default function Reports() {
     }
   };
 
+  const exportReport = () => {
+    const reportData = {
+      generatedAt: new Date().toISOString(),
+      dateRange,
+      stats,
+      appointmentsByType,
+      appointmentsByStatus,
+      branchStats,
+      patientGrowth,
+    };
+
+    const csvRows = [
+      "Report Summary",
+      `Generated: ${format(new Date(), "MMM dd, yyyy HH:mm")}`,
+      `Date Range: ${dateRange}`,
+      "",
+      "Key Metrics",
+      `Total Patients,${stats.totalPatients}`,
+      `New Patients,${stats.newPatients}`,
+      `Total Appointments,${stats.totalAppointments}`,
+      `Completed Appointments,${stats.completedAppointments}`,
+      `No Shows,${stats.noShows}`,
+      `Follow-ups,${stats.followups}`,
+      `Prescriptions,${stats.prescriptions}`,
+      "",
+      "Branch Statistics",
+      "Branch,Total,Completed,No Shows",
+      ...branchStats.map(b => `${b.name},${b.total},${b.completed},${b.noShow}`),
+      "",
+      "Patient Growth (Last 6 Months)",
+      "Month,New Patients",
+      ...patientGrowth.map(p => `${p.month},${p.patients}`),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clinic-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Report exported successfully");
+  };
+
   const StatCard = ({ title, value, icon: Icon, description }: any) => (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -187,23 +280,30 @@ export default function Reports() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Reports & Analytics</h1>
             <p className="text-muted-foreground">
               Comprehensive insights into your clinic performance
             </p>
           </div>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="thisMonth">This Month</SelectItem>
-              <SelectItem value="lastMonth">Last Month</SelectItem>
-              <SelectItem value="last3Months">Last 3 Months</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="lastMonth">Last Month</SelectItem>
+                <SelectItem value="last3Months">Last 3 Months</SelectItem>
+                <SelectItem value="last6Months">Last 6 Months</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={exportReport} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -260,6 +360,7 @@ export default function Reports() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
             <TabsTrigger value="patients">Patients</TabsTrigger>
+            <TabsTrigger value="branches">Branches</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -355,10 +456,53 @@ export default function Reports() {
             <Card>
               <CardHeader>
                 <CardTitle>Patient Growth</CardTitle>
-                <CardDescription>Coming soon: Patient registration trends and demographics</CardDescription>
+                <CardDescription>New patient registrations over the last 6 months</CardDescription>
               </CardHeader>
-              <CardContent className="h-[400px] flex items-center justify-center text-muted-foreground">
-                Patient analytics will be displayed here
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <AreaChart data={patientGrowth}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="patients" 
+                      stroke="hsl(var(--primary))" 
+                      fill="hsl(var(--primary))" 
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="branches" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Branch Performance</CardTitle>
+                <CardDescription>Appointments by branch</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {branchStats.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={branchStats}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="total" name="Total" fill="hsl(var(--primary))" />
+                      <Bar dataKey="completed" name="Completed" fill="hsl(var(--secondary))" />
+                      <Bar dataKey="noShow" name="No Shows" fill="hsl(var(--destructive))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                    No branch data available for selected period
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

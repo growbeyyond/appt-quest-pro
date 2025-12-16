@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Trash2 } from "lucide-react";
+import { Users, Plus, Trash2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RoleDescription } from "@/components/RoleDescription";
 import {
@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -30,6 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface UserWithRole {
   id: string;
@@ -46,6 +57,8 @@ const UserManagement = () => {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserRole, setNewUserRole] = useState<string>("receptionist");
+  const [resetPasswordDialog, setResetPasswordDialog] = useState<{open: boolean; user: UserWithRole | null}>({ open: false, user: null });
+  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -131,10 +144,25 @@ const UserManagement = () => {
   const handleChangeRole = async (userId: string, newRole: string) => {
     try {
       const { error } = await supabase.functions.invoke("manage-user-roles", {
+        body: { action: "change_role", userId, role: newRole },
+      });
+      if (error) throw error;
+      toast({ title: "Success", description: "User role updated" });
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordDialog.user || !newPassword) return;
+    
+    try {
+      const { error } = await supabase.functions.invoke("manage-user-roles", {
         body: {
-          action: "change_role",
-          userId,
-          role: newRole,
+          action: "reset_password",
+          userId: resetPasswordDialog.user.id,
+          password: newPassword,
         },
       });
 
@@ -142,14 +170,14 @@ const UserManagement = () => {
 
       toast({
         title: "Success",
-        description: "User role updated successfully",
+        description: "Password reset successfully",
       });
-
-      loadUsers();
+      setResetPasswordDialog({ open: false, user: null });
+      setNewPassword("");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to reset password",
         variant: "destructive",
       });
     }
@@ -279,36 +307,36 @@ const UserManagement = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={async () => {
-                            if (confirm(`Are you sure you want to delete ${user.full_name || user.email}? This action cannot be undone.`)) {
-                              try {
-                                const { error } = await supabase.functions.invoke("manage-user-roles", {
-                                  body: {
-                                    action: "delete_user",
-                                    userId: user.id,
-                                  },
-                                });
-                                if (error) throw error;
-                                toast({
-                                  title: "Success",
-                                  description: "User deleted successfully",
-                                });
-                                loadUsers();
-                              } catch (error: any) {
-                                toast({
-                                  title: "Error",
-                                  description: error.message || "Failed to delete user",
-                                  variant: "destructive",
-                                });
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setResetPasswordDialog({ open: true, user })}
+                            title="Reset password"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm(`Are you sure you want to delete ${user.full_name || user.email}?`)) {
+                                try {
+                                  const { error } = await supabase.functions.invoke("manage-user-roles", {
+                                    body: { action: "delete_user", userId: user.id },
+                                  });
+                                  if (error) throw error;
+                                  toast({ title: "Success", description: "User deleted" });
+                                  loadUsers();
+                                } catch (error: any) {
+                                  toast({ title: "Error", description: error.message, variant: "destructive" });
+                                }
                               }
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -317,6 +345,32 @@ const UserManagement = () => {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={resetPasswordDialog.open} onOpenChange={(open) => setResetPasswordDialog({ open, user: resetPasswordDialog.user })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                Set a new password for {resetPasswordDialog.user?.full_name || resetPasswordDialog.user?.email}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>New Password</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={8}
+                  placeholder="Minimum 8 characters"
+                />
+              </div>
+              <Button onClick={handleResetPassword} className="w-full" disabled={newPassword.length < 8}>
+                Reset Password
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
