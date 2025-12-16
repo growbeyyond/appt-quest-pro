@@ -93,29 +93,61 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     navigate("/auth");
   };
 
-  const baseNavItems = [
-    { icon: Activity, label: "Dashboard", path: "/dashboard" },
-    { icon: Calendar, label: "Calendar", path: "/calendar" },
-    { icon: Users, label: "Patients", path: "/patients" },
-    { icon: ClipboardList, label: "Appointments", path: "/appointments" },
-    { icon: Clock, label: "Queue", path: "/queue" },
-    { icon: Bell, label: "Follow-ups", path: "/followups" },
-    { icon: Users, label: "Waitlist", path: "/waitlist" },
-    { icon: Calendar, label: "Reschedule", path: "/reschedule-requests" },
-    { icon: Pill, label: "Rx Templates", path: "/prescription-templates" },
-    { icon: BarChart3, label: "Reports", path: "/reports" },
-    { icon: Settings, label: "Settings", path: "/settings" },
-  ];
+  // Role-specific navigation items
+  const getNavItems = () => {
+    const commonItems = [
+      { icon: Activity, label: "Dashboard", path: "/dashboard" },
+    ];
 
-  const adminNavItems = [
-    { icon: Building2, label: "Branches", path: "/branches" },
-    { icon: UserCog, label: "Users", path: "/users" },
-    { icon: ScrollText, label: "Audit Logs", path: "/audit-logs" },
-  ];
+    const receptionistItems = [
+      { icon: Calendar, label: "Calendar", path: "/calendar" },
+      { icon: Users, label: "Patients", path: "/patients" },
+      { icon: ClipboardList, label: "Appointments", path: "/appointments" },
+      { icon: Clock, label: "Queue", path: "/queue" },
+      { icon: Bell, label: "Follow-ups", path: "/followups" },
+      { icon: Users, label: "Waitlist", path: "/waitlist" },
+      { icon: Calendar, label: "Reschedule", path: "/reschedule-requests" },
+    ];
 
-  const navItems = userRole === "admin" 
-    ? [...baseNavItems.slice(0, -1), ...adminNavItems, baseNavItems[baseNavItems.length - 1]]
-    : baseNavItems;
+    const doctorItems = [
+      { icon: Calendar, label: "Calendar", path: "/calendar" },
+      { icon: Users, label: "Patients", path: "/patients" },
+      { icon: ClipboardList, label: "Appointments", path: "/appointments" },
+      { icon: Clock, label: "Queue", path: "/queue" },
+      { icon: Bell, label: "Follow-ups", path: "/followups" },
+      { icon: Pill, label: "Rx Templates", path: "/prescription-templates" },
+    ];
+
+    const adminItems = [
+      { icon: Calendar, label: "Calendar", path: "/calendar" },
+      { icon: Users, label: "Patients", path: "/patients" },
+      { icon: ClipboardList, label: "Appointments", path: "/appointments" },
+      { icon: Clock, label: "Queue", path: "/queue" },
+      { icon: Bell, label: "Follow-ups", path: "/followups" },
+      { icon: Users, label: "Waitlist", path: "/waitlist" },
+      { icon: Calendar, label: "Reschedule", path: "/reschedule-requests" },
+      { icon: Pill, label: "Rx Templates", path: "/prescription-templates" },
+      { icon: BarChart3, label: "Reports", path: "/reports" },
+      { icon: Building2, label: "Branches", path: "/branches" },
+      { icon: UserCog, label: "Users", path: "/users" },
+      { icon: ScrollText, label: "Audit Logs", path: "/audit-logs" },
+    ];
+
+    const settingsItem = { icon: Settings, label: "Settings", path: "/settings" };
+
+    switch (userRole) {
+      case "receptionist":
+        return [...commonItems, ...receptionistItems, settingsItem];
+      case "doctor":
+        return [...commonItems, ...doctorItems, settingsItem];
+      case "admin":
+        return [...commonItems, ...adminItems, settingsItem];
+      default:
+        return [...commonItems, settingsItem];
+    }
+  };
+
+  const navItems = getNavItems();
 
   const initials = profile?.full_name
     ?.split(" ")
