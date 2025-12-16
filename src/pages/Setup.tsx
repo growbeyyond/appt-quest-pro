@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, CheckCircle2 } from "lucide-react";
+import { Shield, CheckCircle2, ArrowLeft } from "lucide-react";
 
 const Setup = () => {
   const [email, setEmail] = useState("");
@@ -159,6 +159,16 @@ const Setup = () => {
           <div className="mt-6 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
             <p className="font-medium mb-1">💡 Important:</p>
             <p>This admin account will have full access to manage the clinic, create other users, and configure settings.</p>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link 
+              to="/auth" 
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Login
+            </Link>
           </div>
         </CardContent>
       </Card>
