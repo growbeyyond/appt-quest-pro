@@ -17,6 +17,7 @@ interface CheckInDialogProps {
   patientName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export function CheckInDialog({
@@ -24,6 +25,7 @@ export function CheckInDialog({
   patientName,
   open,
   onOpenChange,
+  onSuccess,
 }: CheckInDialogProps) {
   const [vitals, setVitals] = useState({
     bloodPressure: "",
@@ -80,6 +82,7 @@ Weight: ${vitals.weight || 'Not recorded'}
 
       toast.success(`${patientName} checked in successfully`);
       onOpenChange(false);
+      onSuccess?.();
       setVitals({ bloodPressure: "", temperature: "", pulse: "", weight: "" });
     } catch (error) {
       console.error('Error checking in patient:', error);
