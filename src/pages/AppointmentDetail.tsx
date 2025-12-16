@@ -85,14 +85,52 @@ const AppointmentDetail = () => {
     }
   };
 
+  const checkForConflicts = async (): Promise<boolean> => {
+    if (!formData.appointment_date || !formData.appointment_time || !formData.branch_id) {
+      return false;
+    }
+
+    const [hours, minutes] = formData.appointment_time.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const endMinutes = startMinutes + formData.duration_minutes;
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, appointment_time, duration_minutes, buffer_minutes')
+      .eq('appointment_date', formData.appointment_date)
+      .eq('branch_id', formData.branch_id)
+      .in('status', ['scheduled', 'checked_in', 'in_consultation']);
+
+    if (error || !data) return false;
+
+    const conflicts = data.filter((appt) => {
+      if (!isNew && appt.id === id) return false;
+      
+      const [apptHours, apptMinutes] = appt.appointment_time.split(':').map(Number);
+      const apptStart = apptHours * 60 + apptMinutes;
+      const apptEnd = apptStart + appt.duration_minutes + (appt.buffer_minutes || 0);
+
+      return (
+        (startMinutes >= apptStart && startMinutes < apptEnd) ||
+        (endMinutes > apptStart && endMinutes <= apptEnd) ||
+        (startMinutes <= apptStart && endMinutes >= apptEnd)
+      );
+    });
+
+    return conflicts.length > 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent, forceBook = false) => {
     e.preventDefault();
 
     // Check for conflicts if not forcing
     if (!forceBook && formData.appointment_date && formData.appointment_time && formData.branch_id) {
-      setPendingSubmit(true);
-      setConflictDialogOpen(true);
-      return;
+      const hasConflicts = await checkForConflicts();
+      if (hasConflicts) {
+        setPendingSubmit(true);
+        setConflictDialogOpen(true);
+        return;
+      }
     }
 
     setLoading(true);
