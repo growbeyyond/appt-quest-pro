@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -143,7 +145,7 @@ const Settings = () => {
                   Manage clinic branches and locations
                 </p>
               </div>
-              <Button onClick={() => window.location.href = '/branches'}>
+              <Button onClick={() => navigate('/branches')}>
                 Manage Branches
               </Button>
             </div>
@@ -154,7 +156,7 @@ const Settings = () => {
                   Manage staff members and their roles
                 </p>
               </div>
-              <Button onClick={() => window.location.href = '/users'}>
+              <Button onClick={() => navigate('/users')}>
                 Manage Users
               </Button>
             </div>

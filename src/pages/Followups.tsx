@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bell, AlertCircle } from "lucide-react";
+import { Bell, AlertCircle, Phone, MessageCircle, Check } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const Followups = () => {
   const [followups, setFollowups] = useState<any[]>([]);
@@ -31,6 +33,34 @@ const Followups = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMarkDone = async (followupId: string) => {
+    try {
+      const { error } = await supabase
+        .from("followups")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("id", followupId);
+
+      if (error) throw error;
+      toast.success("Follow-up marked as done");
+      loadFollowups();
+    } catch (error) {
+      console.error("Error marking followup done:", error);
+      toast.error("Failed to mark follow-up as done");
+    }
+  };
+
+  const handleCall = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleWhatsApp = (phone: string, patientName: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
+    const message = encodeURIComponent(
+      `Hello ${patientName}, this is a follow-up call from Dr. Prasanna's clinic.`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
   };
 
   const getStatusBadge = (status: string) => {
@@ -105,6 +135,37 @@ const Followups = () => {
                       {followup.urgency === "high" && (
                         <Badge variant="destructive">Urgent</Badge>
                       )}
+                      {followup.patients?.phone && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCall(followup.patients.phone)}
+                          >
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleWhatsApp(
+                                followup.patients.phone,
+                                `${followup.patients.first_name} ${followup.patients.last_name}`
+                              )
+                            }
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => handleMarkDone(followup.id)}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Done
+                      </Button>
                     </div>
                   </div>
                 ))}
