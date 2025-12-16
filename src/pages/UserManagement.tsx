@@ -282,13 +282,28 @@ const UserManagement = () => {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
-                            if (confirm("Are you sure you want to delete this user?")) {
-                              // Delete functionality to be implemented
-                              toast({
-                                title: "Coming Soon",
-                                description: "User deletion will be available soon",
-                              });
+                          onClick={async () => {
+                            if (confirm(`Are you sure you want to delete ${user.full_name || user.email}? This action cannot be undone.`)) {
+                              try {
+                                const { error } = await supabase.functions.invoke("manage-user-roles", {
+                                  body: {
+                                    action: "delete_user",
+                                    userId: user.id,
+                                  },
+                                });
+                                if (error) throw error;
+                                toast({
+                                  title: "Success",
+                                  description: "User deleted successfully",
+                                });
+                                loadUsers();
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.message || "Failed to delete user",
+                                  variant: "destructive",
+                                });
+                              }
                             }
                           }}
                         >
