@@ -77,7 +77,13 @@ serve(async (req) => {
           throw new Error("Missing required fields for user creation");
         }
 
-        // Create user in auth
+        // Validate role before creating user
+        const validRoles = ['admin', 'doctor', 'receptionist'];
+        if (!validRoles.includes(role)) {
+          throw new Error(`Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}`);
+        }
+
+        // Create user in auth - the handle_new_user trigger will automatically create the profile
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email,
           password,
@@ -93,32 +99,7 @@ serve(async (req) => {
         }
 
         console.log("User created in auth:", newUser.user.id);
-
-        // Create profile entry
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .insert({
-            id: newUser.user.id,
-            email: email,
-            full_name: fullName,
-          });
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          // Try to clean up the auth user if profile creation fails
-          await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-          throw new Error(`Failed to create profile: ${profileError.message}`);
-        }
-
-        console.log("Profile created for user:", newUser.user.id);
-
-        // Validate role is a valid app_role enum value
-        const validRoles = ['admin', 'doctor', 'receptionist'];
-        if (!validRoles.includes(role)) {
-          console.error("Invalid role:", role);
-          await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-          throw new Error(`Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}`);
-        }
+        // Note: Profile is automatically created by the handle_new_user database trigger
 
         // Assign role
         const { error: roleError } = await supabaseAdmin
