@@ -234,6 +234,7 @@ const Appointments = () => {
         patientName={checkInDialog.patientName}
         open={checkInDialog.open}
         onOpenChange={(open) => setCheckInDialog({ ...checkInDialog, open })}
+        onSuccess={loadAppointments}
       />
 
       <NoShowDialog

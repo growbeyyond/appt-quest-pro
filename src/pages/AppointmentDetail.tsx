@@ -16,7 +16,7 @@ const AppointmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isNew = id === "new";
+  const isNew = !id;
 
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
