@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { DailyFollowupPopup } from "@/components/DailyFollowupPopup";
+import { BranchSelector } from "@/components/BranchSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, addWeeks, subWeeks } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, eachDayOfInterval } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -21,8 +23,12 @@ import {
   PointerSensor,
 } from "@dnd-kit/core";
 
+type ViewMode = "day" | "week" | "month";
+
 const Calendar = () => {
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [followups, setFollowups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,38 +46,65 @@ const Calendar = () => {
     })
   );
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const timeSlots = Array.from({ length: 24 }, (_, i) => i);
 
+  // Month view days
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
   useEffect(() => {
     loadData();
-  }, [currentWeek]);
+  }, [currentDate, viewMode, selectedBranch]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
+      let startDate: string, endDate: string;
+      
+      if (viewMode === "day") {
+        startDate = format(currentDate, "yyyy-MM-dd");
+        endDate = startDate;
+      } else if (viewMode === "week") {
+        startDate = format(weekStart, "yyyy-MM-dd");
+        endDate = format(endOfWeek(currentDate, { weekStartsOn: 0 }), "yyyy-MM-dd");
+      } else {
+        startDate = format(monthStart, "yyyy-MM-dd");
+        endDate = format(monthEnd, "yyyy-MM-dd");
+      }
 
-      const { data: apptData } = await supabase
+      let apptQuery = supabase
         .from("appointments")
         .select(`
           *,
           patients (first_name, last_name, phone)
         `)
-        .gte("appointment_date", format(weekStart, "yyyy-MM-dd"))
-        .lte("appointment_date", format(weekEnd, "yyyy-MM-dd"))
+        .gte("appointment_date", startDate)
+        .lte("appointment_date", endDate)
         .order("appointment_time", { ascending: true });
 
-      const { data: followupData } = await supabase
+      if (selectedBranch !== "all") {
+        apptQuery = apptQuery.eq("branch_id", selectedBranch);
+      }
+
+      let followupQuery = supabase
         .from("followups")
         .select(`
           *,
           patients (first_name, last_name, phone)
         `)
         .eq("status", "pending")
-        .gte("followup_date", format(weekStart, "yyyy-MM-dd"))
-        .lte("followup_date", format(weekEnd, "yyyy-MM-dd"));
+        .gte("followup_date", startDate)
+        .lte("followup_date", endDate);
+
+      if (selectedBranch !== "all") {
+        followupQuery = followupQuery.eq("branch_id", selectedBranch);
+      }
+
+      const { data: apptData } = await apptQuery;
+      const { data: followupData } = await followupQuery;
 
       setAppointments(apptData || []);
       setFollowups(followupData || []);
@@ -157,6 +190,30 @@ const Calendar = () => {
     setFollowupPopupOpen(true);
   };
 
+  const navigatePrev = () => {
+    if (viewMode === "day") setCurrentDate(addDays(currentDate, -1));
+    else if (viewMode === "week") setCurrentDate(subWeeks(currentDate, 1));
+    else setCurrentDate(subMonths(currentDate, 1));
+  };
+
+  const navigateNext = () => {
+    if (viewMode === "day") setCurrentDate(addDays(currentDate, 1));
+    else if (viewMode === "week") setCurrentDate(addWeeks(currentDate, 1));
+    else setCurrentDate(addMonths(currentDate, 1));
+  };
+
+  const getDateRangeLabel = () => {
+    if (viewMode === "day") return format(currentDate, "MMMM d, yyyy");
+    if (viewMode === "week") return `${format(weekStart, "MMM dd")} - ${format(endOfWeek(currentDate, { weekStartsOn: 0 }), "MMM dd, yyyy")}`;
+    return format(currentDate, "MMMM yyyy");
+  };
+
+  const handleSlotClick = (date: Date, hour?: number) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    const timeStr = hour !== undefined ? `${hour.toString().padStart(2, "0")}:00` : "09:00";
+    navigate(`/appointments/new?date=${dateStr}&time=${timeStr}${selectedBranch !== "all" ? `&branch=${selectedBranch}` : ""}`);
+  };
+
   const activeAppointment = appointments.find((a) => a.id === activeId);
 
   return (
@@ -167,43 +224,47 @@ const Calendar = () => {
           <div>
             <h1 className="text-3xl font-bold">Calendar</h1>
             <p className="text-muted-foreground">
-              View and manage appointments by week
+              View and manage appointments
             </p>
           </div>
-          <Button onClick={() => navigate("/appointments/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Appointment
-          </Button>
+          <div className="flex items-center gap-4">
+            <BranchSelector 
+              value={selectedBranch} 
+              onChange={setSelectedBranch} 
+              showAll={true}
+            />
+            <Button onClick={() => navigate("/appointments/new")}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Appointment
+            </Button>
+          </div>
         </div>
 
-        {/* Week Navigation */}
+        {/* View Mode Toggle & Navigation */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                {format(weekStart, "MMM dd")} - {format(endOfWeek(currentWeek, { weekStartsOn: 0 }), "MMM dd, yyyy")}
-              </CardTitle>
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                  <TabsList>
+                    <TabsTrigger value="day">Day</TabsTrigger>
+                    <TabsTrigger value="week">Week</TabsTrigger>
+                    <TabsTrigger value="month">Month</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  {getDateRangeLabel()}
+                </CardTitle>
+              </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-                >
+                <Button variant="outline" size="sm" onClick={navigatePrev}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentWeek(new Date())}
-                >
+                <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
                   Today
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-                >
+                <Button variant="outline" size="sm" onClick={navigateNext}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -212,7 +273,73 @@ const Calendar = () => {
           <CardContent>
             {loading ? (
               <p className="text-center py-8 text-muted-foreground">Loading calendar...</p>
+            ) : viewMode === "month" ? (
+              /* Month View */
+              <div className="grid grid-cols-7 gap-1">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                  <div key={day} className="text-center text-xs font-medium text-muted-foreground p-2">
+                    {day}
+                  </div>
+                ))}
+                {/* Padding for start of month */}
+                {Array.from({ length: monthStart.getDay() }).map((_, i) => (
+                  <div key={`pad-${i}`} className="p-2" />
+                ))}
+                {monthDays.map((day) => {
+                  const dayAppts = appointments.filter((a) => isSameDay(parseISO(a.appointment_date), day));
+                  const dayFollowups = getFollowupsForDate(day);
+                  const isToday = isSameDay(day, new Date());
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`min-h-[80px] p-2 border border-border rounded cursor-pointer hover:bg-muted/50 ${isToday ? "bg-primary/10" : ""}`}
+                      onClick={() => handleDateClick(day)}
+                    >
+                      <div className={`text-sm font-medium ${isToday ? "text-primary" : ""}`}>{format(day, "d")}</div>
+                      {dayAppts.length > 0 && (
+                        <Badge variant="secondary" className="bg-info/10 text-info text-[10px] mt-1">{dayAppts.length} appt</Badge>
+                      )}
+                      {dayFollowups.length > 0 && (
+                        <Badge variant="secondary" className="bg-warning/10 text-warning text-[10px] mt-1">{dayFollowups.length} F/U</Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : viewMode === "day" ? (
+              /* Day View */
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                <div className="border border-border rounded-lg overflow-hidden">
+                  {timeSlots.map((hour) => {
+                    const slotAppointments = getAppointmentsForSlot(currentDate, hour);
+                    const slotId = `${format(currentDate, "yyyy-MM-dd")}_${hour.toString().padStart(2, "0")}`;
+                    return (
+                      <div key={hour} className="flex border-b border-border last:border-b-0">
+                        <div className="w-16 text-xs text-muted-foreground p-2 bg-muted/30 flex items-start justify-end">
+                          {format(new Date().setHours(hour, 0), "ha")}
+                        </div>
+                        <div
+                          className="flex-1 min-h-[60px] p-1 hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => handleSlotClick(currentDate, hour)}
+                        >
+                          {slotAppointments.map((appt) => (
+                            <div
+                              key={appt.id}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}`); }}
+                              className={`p-2 rounded border mb-1 text-xs cursor-pointer hover:shadow-md transition-shadow ${getStatusColor(appt.status)}`}
+                            >
+                              <div className="font-medium">{appt.patients?.first_name} {appt.patients?.last_name}</div>
+                              <div className="text-[10px] opacity-80">{appt.appointment_time} • {appt.duration_minutes}m</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </DndContext>
             ) : (
+              /* Week View */
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -266,7 +393,8 @@ const Calendar = () => {
                               <div
                                 key={slotId}
                                 data-slot-id={slotId}
-                                className="min-h-[60px] p-1 hover:bg-muted/50 transition-colors border-l border-border"
+                                className="min-h-[60px] p-1 hover:bg-muted/50 transition-colors border-l border-border cursor-pointer"
+                                onClick={() => handleSlotClick(day, hour)}
                               >
                                 {slotAppointments.map((appt) => (
                                   <div
@@ -287,7 +415,7 @@ const Calendar = () => {
                                         over: { id: slotId },
                                       } as any);
                                     }}
-                                    onClick={() => navigate(`/appointments/${appt.id}`)}
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${appt.id}`); }}
                                     className={`p-2 rounded border mb-1 text-xs cursor-move hover:shadow-md transition-shadow ${getStatusColor(
                                       appt.status
                                     )}`}

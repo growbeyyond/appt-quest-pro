@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DashboardReminders } from "@/components/DashboardReminders";
+import { BranchSelector } from "@/components/BranchSelector";
 import {
   Calendar,
   Users,
@@ -16,8 +17,9 @@ import {
   TrendingUp,
   Activity,
   CheckCircle,
+  Building2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, differenceInMinutes } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -26,6 +28,7 @@ type UserRole = Database["public"]["Enums"]["app_role"];
 const Dashboard = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [followups, setFollowups] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
   const [stats, setStats] = useState({
     todayAppointments: 0,
     pendingFollowups: 0,
@@ -33,6 +36,10 @@ const Dashboard = () => {
     completedToday: 0,
     checkedInToday: 0,
     monthlyRevenue: 0,
+    activeUsers: 0,
+    branchCount: 0,
+    avgWaitTime: 0,
+    newPatientsThisMonth: 0,
   });
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,8 +47,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadUserRole();
-    loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [selectedBranch]);
 
   const loadUserRole = async () => {
     try {
@@ -63,9 +73,14 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       const today = format(new Date(), "yyyy-MM-dd");
+      const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
+
+      // Build branch filter
+      const branchFilter = selectedBranch !== "all" ? selectedBranch : null;
 
       // Get today's appointments
-      const { data: apptData } = await supabase
+      let apptQuery = supabase
         .from("appointments")
         .select(`
           *,
@@ -73,11 +88,16 @@ const Dashboard = () => {
         `)
         .eq("appointment_date", today)
         .order("appointment_time", { ascending: true });
+      
+      if (branchFilter) {
+        apptQuery = apptQuery.eq("branch_id", branchFilter);
+      }
 
+      const { data: apptData } = await apptQuery;
       setAppointments(apptData || []);
 
       // Get pending follow-ups
-      const { data: followupData } = await supabase
+      let followupQuery = supabase
         .from("followups")
         .select(`
           *,
@@ -88,34 +108,90 @@ const Dashboard = () => {
         .order("followup_date", { ascending: true })
         .limit(5);
 
+      if (branchFilter) {
+        followupQuery = followupQuery.eq("branch_id", branchFilter);
+      }
+
+      const { data: followupData } = await followupQuery;
       setFollowups(followupData || []);
 
-      // Get stats
-      const { count: apptCount } = await supabase
+      // Get stats with branch filter
+      let apptCountQuery = supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
         .eq("appointment_date", today);
+      if (branchFilter) apptCountQuery = apptCountQuery.eq("branch_id", branchFilter);
+      const { count: apptCount } = await apptCountQuery;
 
-      const { count: followupCount } = await supabase
+      let followupCountQuery = supabase
         .from("followups")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
+      if (branchFilter) followupCountQuery = followupCountQuery.eq("branch_id", branchFilter);
+      const { count: followupCount } = await followupCountQuery;
 
-      const { count: patientCount } = await supabase
+      let patientCountQuery = supabase
         .from("patients")
         .select("*", { count: "exact", head: true });
+      if (branchFilter) patientCountQuery = patientCountQuery.eq("branch_id", branchFilter);
+      const { count: patientCount } = await patientCountQuery;
 
-      const { count: completedCount } = await supabase
+      let completedCountQuery = supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
         .eq("appointment_date", today)
         .eq("status", "completed");
+      if (branchFilter) completedCountQuery = completedCountQuery.eq("branch_id", branchFilter);
+      const { count: completedCount } = await completedCountQuery;
 
-      const { count: checkedInCount } = await supabase
+      let checkedInCountQuery = supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
         .eq("appointment_date", today)
         .eq("status", "checked_in");
+      if (branchFilter) checkedInCountQuery = checkedInCountQuery.eq("branch_id", branchFilter);
+      const { count: checkedInCount } = await checkedInCountQuery;
+
+      // Get new patients this month
+      let newPatientsQuery = supabase
+        .from("patients")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", monthStart)
+        .lte("created_at", monthEnd);
+      if (branchFilter) newPatientsQuery = newPatientsQuery.eq("branch_id", branchFilter);
+      const { count: newPatientsCount } = await newPatientsQuery;
+
+      // Get active users count
+      const { count: activeUsersCount } = await supabase
+        .from("user_roles")
+        .select("*", { count: "exact", head: true });
+
+      // Get branch count
+      const { count: branchCount } = await supabase
+        .from("branches")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
+      // Calculate average wait time from today's completed appointments
+      let waitTimeQuery = supabase
+        .from("appointments")
+        .select("checked_in_at, consultation_started_at")
+        .eq("appointment_date", today)
+        .eq("status", "completed")
+        .not("checked_in_at", "is", null)
+        .not("consultation_started_at", "is", null);
+      if (branchFilter) waitTimeQuery = waitTimeQuery.eq("branch_id", branchFilter);
+      const { data: waitTimeData } = await waitTimeQuery;
+
+      let avgWaitTime = 0;
+      if (waitTimeData && waitTimeData.length > 0) {
+        const totalWait = waitTimeData.reduce((acc, appt) => {
+          const checkedIn = new Date(appt.checked_in_at);
+          const consultStarted = new Date(appt.consultation_started_at);
+          return acc + differenceInMinutes(consultStarted, checkedIn);
+        }, 0);
+        avgWaitTime = Math.round(totalWait / waitTimeData.length);
+      }
 
       setStats({
         todayAppointments: apptCount || 0,
@@ -123,7 +199,11 @@ const Dashboard = () => {
         totalPatients: patientCount || 0,
         completedToday: completedCount || 0,
         checkedInToday: checkedInCount || 0,
-        monthlyRevenue: 0, // Placeholder for revenue calculation
+        monthlyRevenue: 0,
+        activeUsers: activeUsersCount || 0,
+        branchCount: branchCount || 0,
+        avgWaitTime,
+        newPatientsThisMonth: newPatientsCount || 0,
       });
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -219,7 +299,7 @@ const Dashboard = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">New Patients</span>
-                <span className="font-medium">—</span>
+                <span className="font-medium">{stats.newPatientsThisMonth}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Revenue</span>
@@ -240,15 +320,15 @@ const Dashboard = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Active Users</span>
-                <span className="font-medium">—</span>
+                <span className="font-medium">{stats.activeUsers}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Branches</span>
-                <span className="font-medium">—</span>
+                <span className="font-medium">{stats.branchCount}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Avg. Wait Time</span>
-                <span className="font-medium">—</span>
+                <span className="font-medium">{stats.avgWaitTime > 0 ? `${stats.avgWaitTime} min` : "—"}</span>
               </div>
             </div>
           </CardContent>
@@ -535,18 +615,25 @@ const Dashboard = () => {
               {!userRole && "Welcome back!"}
             </p>
           </div>
-          {(userRole === "receptionist" || userRole === "admin") && (
-            <div className="flex gap-2">
-              <Button onClick={() => navigate("/patients/new")}>
-                <UserPlus className="mr-2 h-4 w-4" />
-                New Patient
-              </Button>
-              <Button onClick={() => navigate("/appointments/new")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Book Appointment
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            <BranchSelector 
+              value={selectedBranch} 
+              onChange={setSelectedBranch} 
+              showAll={true}
+            />
+            {(userRole === "receptionist" || userRole === "admin") && (
+              <div className="flex gap-2">
+                <Button onClick={() => navigate("/patients/new")}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  New Patient
+                </Button>
+                <Button onClick={() => navigate("/appointments/new")}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Book Appointment
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Role-based Content */}

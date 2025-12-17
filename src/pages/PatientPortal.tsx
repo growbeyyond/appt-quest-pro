@@ -4,13 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, Clock, Download, LogOut } from "lucide-react";
+import { Calendar, FileText, Clock, Download, LogOut, XCircle, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import logo from "@/assets/logo.jpeg";
 
 export default function PatientPortal() {
@@ -20,7 +30,11 @@ export default function PatientPortal() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([]);
+  const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [rescheduleForm, setRescheduleForm] = useState({
     appointmentId: "",
     requestedDate: "",
@@ -101,6 +115,16 @@ export default function PatientPortal() {
 
       if (requestsError) throw requestsError;
       setRescheduleRequests(requestsData || []);
+
+      // Load medical history
+      const { data: historyData, error: historyError } = await supabase
+        .from("medical_history")
+        .select("*")
+        .eq("patient_id", portalAccess.patient_id)
+        .order("created_at", { ascending: false });
+
+      if (historyError) throw historyError;
+      setMedicalHistory(historyData || []);
     } catch (error: any) {
       console.error("Error loading patient data:", error);
       toast.error("Failed to load your information");
@@ -111,6 +135,36 @@ export default function PatientPortal() {
 
   const handleRescheduleRequest = async (appointmentId: string) => {
     setRescheduleForm({ ...rescheduleForm, appointmentId });
+  };
+
+  const handleCancelAppointment = (appointmentId: string) => {
+    setAppointmentToCancel(appointmentId);
+    setCancelDialogOpen(true);
+  };
+
+  const confirmCancelAppointment = async () => {
+    if (!appointmentToCancel) return;
+
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ 
+          status: "cancelled",
+          notes: cancelReason ? `Cancelled by patient: ${cancelReason}` : "Cancelled by patient"
+        })
+        .eq("id", appointmentToCancel);
+
+      if (error) throw error;
+
+      toast.success("Appointment cancelled successfully");
+      setCancelDialogOpen(false);
+      setAppointmentToCancel(null);
+      setCancelReason("");
+      loadPatientData();
+    } catch (error: any) {
+      console.error("Error cancelling appointment:", error);
+      toast.error("Failed to cancel appointment");
+    }
   };
 
   const submitRescheduleRequest = async () => {
@@ -277,6 +331,10 @@ export default function PatientPortal() {
               <FileText className="mr-2 h-4 w-4" />
               Prescriptions
             </TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Activity className="mr-2 h-4 w-4" />
+              Medical History
+            </TabsTrigger>
             <TabsTrigger value="reschedule" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Clock className="mr-2 h-4 w-4" />
               Reschedule
@@ -319,15 +377,80 @@ export default function PatientPortal() {
                               )}
                             </div>
                             {apt.status === "scheduled" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRescheduleRequest(apt.id)}
-                                className="border-primary/30"
-                              >
-                                Request Reschedule
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRescheduleRequest(apt.id)}
+                                  className="border-primary/30"
+                                >
+                                  Reschedule
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleCancelAppointment(apt.id)}
+                                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                                >
+                                  <XCircle className="mr-1 h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              </div>
                             )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <Card className="border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-primary">Medical History</CardTitle>
+                <CardDescription>View your medical history and records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {medicalHistory.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No medical history records found</p>
+                ) : (
+                  <div className="space-y-4">
+                    {medicalHistory.map((record) => (
+                      <Card key={record.id} className="border-secondary/20">
+                        <CardContent className="pt-6">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="border-primary/50 text-primary">
+                                {record.history_type}
+                              </Badge>
+                              {record.severity && (
+                                <Badge variant={
+                                  record.severity === "severe" ? "destructive" :
+                                  record.severity === "moderate" ? "secondary" :
+                                  "outline"
+                                }>
+                                  {record.severity}
+                                </Badge>
+                              )}
+                              <Badge variant={record.status === "active" ? "default" : "secondary"}>
+                                {record.status}
+                              </Badge>
+                            </div>
+                            <p className="font-medium text-lg">{record.title}</p>
+                            {record.description && (
+                              <p className="text-muted-foreground">{record.description}</p>
+                            )}
+                            <div className="flex gap-4 text-sm text-muted-foreground">
+                              {record.start_date && (
+                                <span>Started: {format(new Date(record.start_date), "MMM d, yyyy")}</span>
+                              )}
+                              {record.end_date && (
+                                <span>Ended: {format(new Date(record.end_date), "MMM d, yyyy")}</span>
+                              )}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -494,6 +617,32 @@ export default function PatientPortal() {
           <p className="text-muted-foreground text-xs mt-2">For any queries, please contact the clinic.</p>
         </div>
       </footer>
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this appointment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 py-4">
+            <Label>Reason for cancellation (optional)</Label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Please let us know why you're cancelling..."
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setCancelDialogOpen(false); setCancelReason(""); }}>
+              Keep Appointment
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCancelAppointment} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Cancel Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
