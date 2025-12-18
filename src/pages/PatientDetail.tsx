@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle } from "lucide-react";
+import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle, CalendarDays } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
 import { ConsentCapture } from "@/components/ConsentCapture";
 import { MedicalHistoryManager } from "@/components/MedicalHistoryManager";
 import { PrescriptionManager } from "@/components/PrescriptionManager";
+import { PatientAppointmentHistory } from "@/components/PatientAppointmentHistory";
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -175,6 +176,7 @@ const PatientDetail = () => {
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="contact">Contact & Emergency</TabsTrigger>
               <TabsTrigger value="insurance">Insurance</TabsTrigger>
+              {!isNew && <TabsTrigger value="appointments">Appointments</TabsTrigger>}
               {!isNew && <TabsTrigger value="photo">Photo & Consent</TabsTrigger>}
               {!isNew && <TabsTrigger value="medical">Medical Records</TabsTrigger>}
               {!isNew && <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>}
@@ -363,6 +365,11 @@ const PatientDetail = () => {
                 </CardContent>
               </Card>
             </TabsContent>
+            {!isNew && (
+              <TabsContent value="appointments">
+                <PatientAppointmentHistory patientId={id!} />
+              </TabsContent>
+            )}
 
             {!isNew && (
               <TabsContent value="photo">
