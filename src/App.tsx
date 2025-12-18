@@ -38,7 +38,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/setup" element={<Setup />} />
+          <Route path="/admin" element={<Setup />} />
           <Route path="/patient-portal" element={<PatientPortal />} />
 
           {/* Protected routes - All authenticated users */}

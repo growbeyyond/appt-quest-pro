@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Shield, CheckCircle2, ArrowLeft, Key } from "lucide-react";
 
 const Setup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [setupKey, setSetupKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
@@ -21,6 +22,15 @@ const Setup = () => {
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!setupKey) {
+      toast({
+        title: "Setup key required",
+        description: "Please enter the setup key provided by your administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -30,10 +40,10 @@ const Setup = () => {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       toast({
         title: "Password too short",
-        description: "Password must be at least 6 characters.",
+        description: "Password must be at least 8 characters.",
         variant: "destructive",
       });
       return;
@@ -43,7 +53,7 @@ const Setup = () => {
     
     try {
       const { data, error } = await supabase.functions.invoke("setup-admin", {
-        body: { email, password, fullName },
+        body: { email, password, fullName, setupKey },
       });
 
       if (error) throw error;
@@ -108,6 +118,23 @@ const Setup = () => {
         <CardContent>
           <form onSubmit={handleSetup} className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="setupKey" className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Setup Key
+              </Label>
+              <Input
+                id="setupKey"
+                type="password"
+                placeholder="Enter the setup key"
+                value={setupKey}
+                onChange={(e) => setSetupKey(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Contact your system provider for the setup key
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
               <Input
                 id="fullName"
@@ -134,7 +161,7 @@ const Setup = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
