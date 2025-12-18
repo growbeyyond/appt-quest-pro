@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, Trash2, KeyRound } from "lucide-react";
+import { Users, Plus, Trash2, KeyRound, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { RoleDescription } from "@/components/RoleDescription";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -31,39 +33,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
+interface Branch {
+  id: string;
+  name: string;
+}
 
 interface UserWithRole {
   id: string;
   email: string;
   full_name: string;
   role: string;
+  branches: string[];
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserFullName, setNewUserFullName] = useState("");
   const [newUserRole, setNewUserRole] = useState<string>("receptionist");
+  const [newUserBranches, setNewUserBranches] = useState<string[]>([]);
   const [resetPasswordDialog, setResetPasswordDialog] = useState<{open: boolean; user: UserWithRole | null}>({ open: false, user: null });
   const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
     loadUsers();
+    loadBranches();
   }, []);
+
+  const loadBranches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true);
+      if (error) throw error;
+      setBranches(data || []);
+    } catch (error: any) {
+      console.error("Error loading branches:", error);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -79,11 +96,21 @@ const UserManagement = () => {
 
       if (rolesError) throw rolesError;
 
+      const { data: branchAssignments, error: branchError } = await supabase
+        .from("user_branch_assignments")
+        .select("user_id, branch_id");
+
+      if (branchError) throw branchError;
+
       const usersWithRoles = profiles?.map((profile) => {
         const userRole = roles?.find((r) => r.user_id === profile.id);
+        const userBranches = branchAssignments
+          ?.filter((ba) => ba.user_id === profile.id)
+          .map((ba) => ba.branch_id) || [];
         return {
           ...profile,
           role: userRole?.role || "user",
+          branches: userBranches,
         };
       }) || [];
 
@@ -119,6 +146,16 @@ const UserManagement = () => {
 
       if (error) throw error;
 
+      // Assign branches if selected
+      if (newUserBranches.length > 0 && data?.userId) {
+        for (const branchId of newUserBranches) {
+          await supabase.from("user_branch_assignments").insert({
+            user_id: data.userId,
+            branch_id: branchId,
+          });
+        }
+      }
+
       toast({
         title: "Success",
         description: "User created successfully",
@@ -128,7 +165,8 @@ const UserManagement = () => {
       setNewUserEmail("");
       setNewUserPassword("");
       setNewUserFullName("");
-      setNewUserRole("user");
+      setNewUserRole("receptionist");
+      setNewUserBranches([]);
       loadUsers();
     } catch (error: any) {
       toast({
@@ -181,6 +219,49 @@ const UserManagement = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const openBranchDialog = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSelectedBranches(user.branches);
+    setBranchDialogOpen(true);
+  };
+
+  const handleSaveBranches = async () => {
+    if (!selectedUser) return;
+
+    try {
+      // Delete existing assignments
+      await supabase
+        .from("user_branch_assignments")
+        .delete()
+        .eq("user_id", selectedUser.id);
+
+      // Insert new assignments
+      if (selectedBranches.length > 0) {
+        const assignments = selectedBranches.map((branchId) => ({
+          user_id: selectedUser.id,
+          branch_id: branchId,
+        }));
+        const { error } = await supabase
+          .from("user_branch_assignments")
+          .insert(assignments);
+        if (error) throw error;
+      }
+
+      toast({ title: "Success", description: "Branch assignments updated" });
+      setBranchDialogOpen(false);
+      setSelectedUser(null);
+      loadUsers();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const getBranchNames = (branchIds: string[]) => {
+    return branchIds
+      .map((id) => branches.find((b) => b.id === id)?.name)
+      .filter(Boolean);
   };
 
   return (
@@ -252,6 +333,35 @@ const UserManagement = () => {
                   </Select>
                 </div>
                 <RoleDescription role={newUserRole} />
+                <div className="space-y-2">
+                  <Label>Branch Access</Label>
+                  <div className="border rounded-md p-3 space-y-2">
+                    {branches.map((branch) => (
+                      <div key={branch.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`new-branch-${branch.id}`}
+                          checked={newUserBranches.includes(branch.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewUserBranches([...newUserBranches, branch.id]);
+                            } else {
+                              setNewUserBranches(newUserBranches.filter((id) => id !== branch.id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`new-branch-${branch.id}`} className="text-sm">
+                          {branch.name}
+                        </label>
+                      </div>
+                    ))}
+                    {branches.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No branches available</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Admins have access to all branches. Non-admin users need branch assignments.
+                  </p>
+                </div>
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? "Creating..." : "Create User"}
                 </Button>
@@ -283,6 +393,7 @@ const UserManagement = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Branches</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -296,7 +407,7 @@ const UserManagement = () => {
                           value={user.role}
                           onValueChange={(value) => handleChangeRole(user.id, value)}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-[140px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -307,7 +418,33 @@ const UserManagement = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
+                        {user.role === "admin" ? (
+                          <Badge variant="secondary">All Branches</Badge>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {getBranchNames(user.branches).map((name) => (
+                              <Badge key={name} variant="outline" className="text-xs">
+                                {name}
+                              </Badge>
+                            ))}
+                            {user.branches.length === 0 && (
+                              <span className="text-xs text-destructive">No branches assigned</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex gap-1">
+                          {user.role !== "admin" && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => openBranchDialog(user)}
+                              title="Manage branches"
+                            >
+                              <Building2 className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -346,6 +483,7 @@ const UserManagement = () => {
           </CardContent>
         </Card>
 
+        {/* Reset Password Dialog */}
         <Dialog open={resetPasswordDialog.open} onOpenChange={(open) => setResetPasswordDialog({ open, user: resetPasswordDialog.user })}>
           <DialogContent>
             <DialogHeader>
@@ -367,6 +505,43 @@ const UserManagement = () => {
               </div>
               <Button onClick={handleResetPassword} className="w-full" disabled={newPassword.length < 8}>
                 Reset Password
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Branch Assignment Dialog */}
+        <Dialog open={branchDialogOpen} onOpenChange={setBranchDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manage Branch Access</DialogTitle>
+              <DialogDescription>
+                Select which branches {selectedUser?.full_name || selectedUser?.email} can access
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="border rounded-md p-3 space-y-2">
+                {branches.map((branch) => (
+                  <div key={branch.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`branch-${branch.id}`}
+                      checked={selectedBranches.includes(branch.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedBranches([...selectedBranches, branch.id]);
+                        } else {
+                          setSelectedBranches(selectedBranches.filter((id) => id !== branch.id));
+                        }
+                      }}
+                    />
+                    <label htmlFor={`branch-${branch.id}`} className="text-sm font-medium">
+                      {branch.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleSaveBranches} className="w-full">
+                Save Branch Assignments
               </Button>
             </div>
           </DialogContent>

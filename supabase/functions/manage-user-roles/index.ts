@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface ManageRoleRequest {
-  action: "create_user" | "assign_role" | "remove_role" | "change_role" | "delete_user" | "delete_all_users";
+  action: "create_user" | "assign_role" | "remove_role" | "change_role" | "delete_user" | "delete_all_users" | "reset_password";
   userId?: string;
   email?: string;
   password?: string;
@@ -114,18 +114,18 @@ serve(async (req) => {
         }
 
         // Assign the requested role
-        const { error: roleError } = await supabaseAdmin
+        const { error: roleAssignError } = await supabaseAdmin
           .from("user_roles")
           .insert({
             user_id: newUser.user.id,
             role: role,
           });
 
-        if (roleError) {
-          console.error("Error assigning role:", roleError);
+        if (roleAssignError) {
+          console.error("Error assigning role:", roleAssignError);
           // Clean up on failure
           await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
-          throw new Error(`Failed to assign role: ${roleError.message}`);
+          throw new Error(`Failed to assign role: ${roleAssignError.message}`);
         }
 
         console.log("Role assigned to user:", newUser.user.id);
@@ -194,6 +194,29 @@ serve(async (req) => {
 
         result = { success: true };
         console.log("Role removed from user:", userId);
+        break;
+      }
+
+      case "reset_password": {
+        if (!userId || !password) {
+          throw new Error("Missing userId or password");
+        }
+
+        if (password.length < 8) {
+          throw new Error("Password must be at least 8 characters");
+        }
+
+        const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          password: password,
+        });
+
+        if (resetError) {
+          console.error("Error resetting password:", resetError);
+          throw resetError;
+        }
+
+        result = { success: true };
+        console.log("Password reset for user:", userId);
         break;
       }
 

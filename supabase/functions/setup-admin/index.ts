@@ -25,7 +25,7 @@ serve(async (req) => {
 
     // Parse body once
     const body = await req.json().catch(() => ({}));
-    const { email, password, fullName, forceReset } = body;
+    const { email, password, fullName } = body;
 
     // Check if any users exist
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -37,31 +37,28 @@ serve(async (req) => {
 
     console.log("Existing users count:", existingUsers.users.length);
 
-    // If users exist and not forcing reset, return error
-    if (existingUsers.users.length > 0 && !forceReset) {
+    // If users exist, return error - setup can only be done once
+    if (existingUsers.users.length > 0) {
       return new Response(
         JSON.stringify({ 
           error: "Setup already complete. Users already exist in the system.", 
           existingCount: existingUsers.users.length,
-          hint: "Add forceReset: true to delete existing users and create new admin"
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    // Force delete existing users if forceReset is true
-    if (forceReset && existingUsers.users.length > 0) {
-      console.log("Force resetting - deleting existing users...");
-      for (const user of existingUsers.users) {
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
-        if (error) console.error("Error deleting user:", user.id, error);
-        else console.log("Deleted user:", user.id);
-      }
     }
 
     if (!email || !password || !fullName) {
       return new Response(
         JSON.stringify({ error: "Email, password, and full name are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      return new Response(
+        JSON.stringify({ error: "Password must be at least 8 characters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
