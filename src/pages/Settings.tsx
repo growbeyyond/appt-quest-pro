@@ -512,6 +512,16 @@ const Settings = () => {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
+                      {setupKey === 'CLINIC2024' && (
+                        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                          <p className="text-sm font-medium text-destructive">🚨 Security Warning: Default Setup Key Detected</p>
+                          <p className="text-sm text-destructive/80 mt-1">
+                            You are using the default setup key 'CLINIC2024'. This is insecure as it is publicly known. 
+                            Please change it to a unique, strong key immediately.
+                          </p>
+                        </div>
+                      )}
+
                       <div>
                         <Label className="text-base font-medium">Admin Setup Key</Label>
                         <p className="text-sm text-muted-foreground mt-1">
