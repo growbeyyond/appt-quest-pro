@@ -2,3 +2,6 @@ project_id = "rsbvtchtprlrnppbcxln"
 
 [functions.setup-admin]
 verify_jwt = false
+
+[functions.verify-portal-token]
+verify_jwt = false
