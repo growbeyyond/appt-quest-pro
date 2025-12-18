@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +14,17 @@ import { ConflictDetectionDialog } from "@/components/ConflictDetectionDialog";
 
 const AppointmentDetail = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isNew = !id;
+
+  // URL params for pre-filling
+  const prefilledPatientId = searchParams.get("patientId") || searchParams.get("patient");
+  const waitlistId = searchParams.get("waitlistId");
+  const prefilledDate = searchParams.get("date");
+  const prefilledTime = searchParams.get("time");
+  const prefilledBranchId = searchParams.get("branchId");
 
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
@@ -54,8 +62,28 @@ const AppointmentDetail = () => {
       setPatients(patientsRes.data || []);
       setBranches(branchesRes.data || []);
 
-      if (branchesRes.data && branchesRes.data.length > 0 && isNew) {
-        setFormData((prev) => ({ ...prev, branch_id: branchesRes.data[0].id }));
+      // Pre-fill form from URL params
+      if (isNew) {
+        const updates: any = {};
+        
+        if (prefilledPatientId) {
+          updates.patient_id = prefilledPatientId;
+        }
+        if (prefilledDate) {
+          updates.appointment_date = prefilledDate;
+        }
+        if (prefilledTime) {
+          updates.appointment_time = prefilledTime;
+        }
+        if (prefilledBranchId) {
+          updates.branch_id = prefilledBranchId;
+        } else if (branchesRes.data && branchesRes.data.length > 0) {
+          updates.branch_id = branchesRes.data[0].id;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          setFormData((prev) => ({ ...prev, ...updates }));
+        }
       }
     } catch (error: any) {
       toast({
@@ -138,11 +166,23 @@ const AppointmentDetail = () => {
     try {
       if (isNew) {
         const { data: { user } } = await supabase.auth.getUser();
-        const { error } = await supabase.from("appointments").insert({
+        const { data: newAppointment, error } = await supabase.from("appointments").insert({
           ...formData,
           created_by: user?.id,
-        });
+        }).select().single();
         if (error) throw error;
+
+        // If created from waitlist, update the waitlist entry
+        if (waitlistId && newAppointment) {
+          await supabase
+            .from("waitlist")
+            .update({
+              status: "scheduled",
+              scheduled_appointment_id: newAppointment.id,
+            })
+            .eq("id", waitlistId);
+        }
+
         toast({
           title: "Success",
           description: "Appointment created successfully",

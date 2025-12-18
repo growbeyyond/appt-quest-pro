@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle, CalendarDays } from "lucide-react";
+import { User, Calendar, FileText, Save, ArrowLeft, Camera, FileSignature, MessageCircle, CalendarDays, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSignedUrl } from "@/hooks/useSignedUrl";
 import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
@@ -19,6 +19,7 @@ import { ConsentCapture } from "@/components/ConsentCapture";
 import { MedicalHistoryManager } from "@/components/MedicalHistoryManager";
 import { PrescriptionManager } from "@/components/PrescriptionManager";
 import { PatientAppointmentHistory } from "@/components/PatientAppointmentHistory";
+import { PatientPortalLinkDialog } from "@/components/PatientPortalLinkDialog";
 
 const PatientDetail = () => {
   const { id } = useParams();
@@ -29,6 +30,7 @@ const PatientDetail = () => {
   const [loading, setLoading] = useState(false);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
   const [consentCaptureOpen, setConsentCaptureOpen] = useState(false);
+  const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -511,6 +513,15 @@ const PatientDetail = () => {
                         <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
                         Share Medical Report
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setPortalLinkOpen(true)}
+                        className="w-full justify-start"
+                      >
+                        <Link className="mr-2 h-4 w-4 text-primary" />
+                        Generate Portal Link
+                      </Button>
                     </div>
                     {!formData.phone && (
                       <p className="text-xs text-destructive mt-4">
@@ -557,6 +568,13 @@ const PatientDetail = () => {
                   consent_document_url: consentUrl,
                 });
               }}
+            />
+            <PatientPortalLinkDialog
+              patientId={id!}
+              patientName={`${formData.first_name} ${formData.last_name}`}
+              patientPhone={formData.phone}
+              open={portalLinkOpen}
+              onOpenChange={setPortalLinkOpen}
             />
           </>
         )}
