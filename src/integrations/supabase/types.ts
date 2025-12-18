@@ -750,6 +750,35 @@ export type Database = {
           },
         ]
       }
+      user_branch_assignments: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_branch_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -855,6 +884,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_branch: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_access_patient: {
+        Args: { _patient_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

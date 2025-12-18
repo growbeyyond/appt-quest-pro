@@ -56,75 +56,31 @@ export default function PatientPortal() {
     try {
       setLoading(true);
 
-      // Verify token and get patient
-      const { data: portalAccess, error: accessError } = await supabase
-        .from("patient_portal_access")
-        .select("patient_id, token_expires_at")
-        .eq("login_token", token)
-        .single();
+      // Use secure edge function for all data access
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-portal-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ token, action: 'get_all_data' }),
+        }
+      );
 
-      if (accessError || !portalAccess) {
-        toast.error("Invalid or expired token");
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || "Invalid or expired token");
         return;
       }
 
-      if (new Date(portalAccess.token_expires_at) < new Date()) {
-        toast.error("Token has expired");
-        return;
-      }
-
-      // Get patient details
-      const { data: patientData, error: patientError } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("id", portalAccess.patient_id)
-        .single();
-
-      if (patientError) throw patientError;
-      setPatient(patientData);
-
-      // Load appointments
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from("appointments")
-        .select("*")
-        .eq("patient_id", portalAccess.patient_id)
-        .order("appointment_date", { ascending: false });
-
-      if (appointmentsError) throw appointmentsError;
-      setAppointments(appointmentsData || []);
-
-      // Load prescriptions with items
-      const { data: prescriptionsData, error: prescriptionsError } = await supabase
-        .from("prescriptions")
-        .select(`
-          *,
-          prescription_items (*)
-        `)
-        .eq("patient_id", portalAccess.patient_id)
-        .order("prescribed_date", { ascending: false });
-
-      if (prescriptionsError) throw prescriptionsError;
-      setPrescriptions(prescriptionsData || []);
-
-      // Load reschedule requests
-      const { data: requestsData, error: requestsError } = await supabase
-        .from("reschedule_requests")
-        .select("*")
-        .eq("patient_id", portalAccess.patient_id)
-        .order("created_at", { ascending: false });
-
-      if (requestsError) throw requestsError;
-      setRescheduleRequests(requestsData || []);
-
-      // Load medical history
-      const { data: historyData, error: historyError } = await supabase
-        .from("medical_history")
-        .select("*")
-        .eq("patient_id", portalAccess.patient_id)
-        .order("created_at", { ascending: false });
-
-      if (historyError) throw historyError;
-      setMedicalHistory(historyData || []);
+      setPatient(data.patient);
+      setAppointments(data.appointments || []);
+      setPrescriptions(data.prescriptions || []);
+      setRescheduleRequests(data.rescheduleRequests || []);
+      setMedicalHistory(data.medicalHistory || []);
     } catch (error: any) {
       console.error("Error loading patient data:", error);
       toast.error("Failed to load your information");
@@ -146,15 +102,28 @@ export default function PatientPortal() {
     if (!appointmentToCancel) return;
 
     try {
-      const { error } = await supabase
-        .from("appointments")
-        .update({ 
-          status: "cancelled",
-          notes: cancelReason ? `Cancelled by patient: ${cancelReason}` : "Cancelled by patient"
-        })
-        .eq("id", appointmentToCancel);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-portal-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ 
+            token, 
+            action: 'cancel_appointment',
+            appointmentId: appointmentToCancel,
+            cancelReason
+          }),
+        }
+      );
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to cancel appointment");
+      }
 
       toast.success("Appointment cancelled successfully");
       setCancelDialogOpen(false);
@@ -163,7 +132,7 @@ export default function PatientPortal() {
       loadPatientData();
     } catch (error: any) {
       console.error("Error cancelling appointment:", error);
-      toast.error("Failed to cancel appointment");
+      toast.error(error.message || "Failed to cancel appointment");
     }
   };
 
@@ -174,24 +143,37 @@ export default function PatientPortal() {
     }
 
     try {
-      const { error } = await supabase
-        .from("reschedule_requests")
-        .insert({
-          appointment_id: rescheduleForm.appointmentId,
-          patient_id: patient.id,
-          requested_date: rescheduleForm.requestedDate,
-          requested_time: rescheduleForm.requestedTime,
-          reason: rescheduleForm.reason
-        });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-portal-token`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ 
+            token, 
+            action: 'submit_reschedule',
+            appointmentId: rescheduleForm.appointmentId,
+            requestedDate: rescheduleForm.requestedDate,
+            requestedTime: rescheduleForm.requestedTime,
+            reason: rescheduleForm.reason
+          }),
+        }
+      );
 
-      if (error) throw error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit request");
+      }
 
       toast.success("Reschedule request submitted successfully");
       setRescheduleForm({ appointmentId: "", requestedDate: "", requestedTime: "", reason: "" });
       loadPatientData();
     } catch (error: any) {
       console.error("Error submitting reschedule request:", error);
-      toast.error("Failed to submit request");
+      toast.error(error.message || "Failed to submit request");
     }
   };
 
