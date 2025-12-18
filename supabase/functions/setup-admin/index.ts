@@ -25,7 +25,7 @@ serve(async (req) => {
 
     // Parse body once
     const body = await req.json().catch(() => ({}));
-    const { email, password, fullName } = body;
+    const { email, password, fullName, setupKey } = body;
 
     // Check if any users exist
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
@@ -44,6 +44,38 @@ serve(async (req) => {
           error: "Setup already complete. Users already exist in the system.", 
           existingCount: existingUsers.users.length,
         }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate setup key
+    if (!setupKey) {
+      return new Response(
+        JSON.stringify({ error: "Setup key is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get the setup key from app_settings
+    const { data: settingsData, error: settingsError } = await supabaseAdmin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "setup_secret_key")
+      .single();
+
+    if (settingsError) {
+      console.error("Error fetching setup key:", settingsError);
+      return new Response(
+        JSON.stringify({ error: "Failed to validate setup key" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate the provided setup key
+    if (settingsData.value !== setupKey) {
+      console.log("Invalid setup key provided");
+      return new Response(
+        JSON.stringify({ error: "Invalid setup key" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

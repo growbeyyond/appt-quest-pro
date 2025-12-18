@@ -241,14 +241,6 @@ const Auth = () => {
             </p>
           </div>
 
-          <div className="mt-4 text-center">
-            <Link 
-              to="/setup" 
-              className="text-xs text-muted-foreground hover:text-primary hover:underline"
-            >
-              First time setup? Create admin account
-            </Link>
-          </div>
         </CardContent>
       </Card>
     </div>

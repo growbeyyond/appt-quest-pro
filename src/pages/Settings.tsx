@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Clock, Shield, MessageSquare, User } from "lucide-react";
+import { Settings as SettingsIcon, Clock, Shield, MessageSquare, User, Key, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Settings = () => {
@@ -20,6 +20,12 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Setup key state
+  const [setupKey, setSetupKey] = useState("");
+  const [newSetupKey, setNewSetupKey] = useState("");
+  const [showSetupKey, setShowSetupKey] = useState(false);
+  const [loadingSetupKey, setLoadingSetupKey] = useState(false);
 
   // Clinic settings (stored in localStorage for now - can be moved to DB later)
   const [clinicSettings, setClinicSettings] = useState({
@@ -39,6 +45,12 @@ const Settings = () => {
     loadProfile();
     loadClinicSettings();
   }, []);
+
+  useEffect(() => {
+    if (userRole === "admin") {
+      loadSetupKey();
+    }
+  }, [userRole]);
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +80,24 @@ const Settings = () => {
     const saved = localStorage.getItem("clinicSettings");
     if (saved) {
       setClinicSettings({ ...clinicSettings, ...JSON.parse(saved) });
+    }
+  };
+
+  const loadSetupKey = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "setup_secret_key")
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setSetupKey(data.value);
+        setNewSetupKey(data.value);
+      }
+    } catch (error: any) {
+      console.error("Error loading setup key:", error);
     }
   };
 
@@ -113,6 +143,41 @@ const Settings = () => {
     });
   };
 
+  const handleUpdateSetupKey = async () => {
+    if (!newSetupKey || newSetupKey.length < 6) {
+      toast({
+        title: "Invalid setup key",
+        description: "Setup key must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingSetupKey(true);
+    try {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ value: newSetupKey })
+        .eq("key", "setup_secret_key");
+
+      if (error) throw error;
+
+      setSetupKey(newSetupKey);
+      toast({
+        title: "Success",
+        description: "Setup key updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSetupKey(false);
+    }
+  };
+
   const toggleWorkingDay = (day: string) => {
     setClinicSettings(prev => ({
       ...prev,
@@ -151,6 +216,10 @@ const Settings = () => {
                 <TabsTrigger value="reminders">
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Reminders
+                </TabsTrigger>
+                <TabsTrigger value="security">
+                  <Key className="h-4 w-4 mr-2" />
+                  Security
                 </TabsTrigger>
               </>
             )}
@@ -428,6 +497,75 @@ const Settings = () => {
                     </div>
 
                     <Button onClick={handleSaveClinicSettings}>Save Reminder Settings</Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      Security Settings
+                    </CardTitle>
+                    <CardDescription>Manage admin setup key and security configuration</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-base font-medium">Admin Setup Key</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          This key is required when setting up the first admin account. Keep it secure and change it after initial setup.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="setupKey">Current Setup Key</Label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              id="setupKey"
+                              type={showSetupKey ? "text" : "password"}
+                              value={newSetupKey}
+                              onChange={(e) => setNewSetupKey(e.target.value)}
+                              placeholder="Enter new setup key"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-0 top-0 h-full px-3"
+                              onClick={() => setShowSetupKey(!showSetupKey)}
+                            >
+                              {showSetupKey ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                          <Button 
+                            onClick={handleUpdateSetupKey} 
+                            disabled={loadingSetupKey || newSetupKey === setupKey}
+                          >
+                            {loadingSetupKey ? "Saving..." : "Update Key"}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Setup key must be at least 6 characters
+                        </p>
+                      </div>
+
+                      <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm font-medium text-amber-800">⚠️ Important Security Notes:</p>
+                        <ul className="text-sm text-amber-700 mt-2 space-y-1 list-disc list-inside">
+                          <li>Change the default setup key immediately after first admin account creation</li>
+                          <li>Store the setup key securely - it's needed only for initial setup</li>
+                          <li>The setup page is locked after the first admin is created</li>
+                          <li>Setup URL: <code className="bg-amber-100 px-1 rounded">/admin</code></li>
+                        </ul>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
