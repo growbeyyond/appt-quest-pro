@@ -6,15 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, ArrowLeft, Mail } from "lucide-react";
+import { Shield, ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
+import { PasswordStrengthIndicator, validatePassword } from "@/components/PasswordStrengthIndicator";
+import { z } from "zod";
 import logo from "@/assets/logo.jpg";
+
+const emailSchema = z.string().trim().email({ message: "Invalid email address" }).max(255);
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [isNewPasswordReset, setIsNewPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -28,11 +36,23 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate email
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      toast({
+        title: "Invalid email",
+        description: emailResult.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailResult.data,
         password,
       });
 
@@ -42,6 +62,45 @@ const Auth = () => {
         title: "Success",
         description: "Signed in successfully",
       });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const { isValid } = validatePassword(newPassword);
+    if (!isValid) {
+      toast({
+        title: "Weak password",
+        description: "Please meet all password requirements",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated",
+      });
+      setIsNewPasswordReset(false);
       navigate("/dashboard");
     } catch (error: any) {
       toast({
@@ -94,13 +153,74 @@ const Auth = () => {
   // Handle password reset from email link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('reset') === 'true') {
-      toast({
-        title: "Password Reset",
-        description: "You can now sign in with your new password after setting it.",
-      });
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    // Check for password recovery event
+    if (hashParams.get('type') === 'recovery' || params.get('type') === 'recovery') {
+      setIsNewPasswordReset(true);
     }
+    
+    // Listen for auth state changes for recovery
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsNewPasswordReset(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // New password reset form
+  if (isNewPasswordReset) {
+    const { isValid } = validatePassword(newPassword);
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+        <Card className="w-full max-w-md shadow-xl border-primary/20">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-primary">Set New Password</CardTitle>
+            <CardDescription>
+              Create a strong password for your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className="border-primary/20 focus:border-primary pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <PasswordStrengthIndicator password={newPassword} />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || !isValid}>
+                {loading ? "Updating..." : "Update Password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (showForgotPassword) {
     return (
@@ -216,15 +336,24 @@ const Auth = () => {
                   Forgot password?
                 </button>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-primary/20 focus:border-primary"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="border-primary/20 focus:border-primary pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
