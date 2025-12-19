@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pill, Printer, MessageCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo.jpg";
 
 interface Prescription {
   id: string;
