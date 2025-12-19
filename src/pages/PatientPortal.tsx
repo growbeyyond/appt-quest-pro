@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import logo from "@/assets/logo.jpeg";
+import logo from "@/assets/logo.jpg";
 
 export default function PatientPortal() {
   const [searchParams] = useSearchParams();

@@ -3,48 +3,48 @@
 @tailwind utilities;
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL - Purple & Green theme matching Dr. Prasanna's branding.
+All colors MUST be HSL - Burgundy & Coral theme matching logo.
 */
 
 @layer base {
   :root {
-    /* Purple & Green Theme matching logo */
-    --background: 270 20% 98%;
-    --foreground: 270 30% 15%;
+    /* Burgundy & Coral Theme matching logo */
+    --background: 350 20% 98%;
+    --foreground: 340 40% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 270 30% 15%;
+    --card-foreground: 340 40% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 270 30% 15%;
+    --popover-foreground: 340 40% 15%;
 
-    /* Primary - Deep Purple from logo */
-    --primary: 270 50% 40%;
+    /* Primary - Deep Burgundy from logo */
+    --primary: 340 60% 30%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 270 50% 35%;
-    --primary-light: 270 50% 95%;
+    --primary-hover: 340 60% 25%;
+    --primary-light: 350 60% 96%;
 
-    /* Secondary - Fresh Green from logo leaves */
-    --secondary: 150 60% 35%;
-    --secondary-foreground: 0 0% 100%;
-    --secondary-light: 150 60% 95%;
+    /* Secondary - Coral/Pink from logo */
+    --secondary: 0 70% 80%;
+    --secondary-foreground: 340 60% 25%;
+    --secondary-light: 0 70% 96%;
 
     /* Muted backgrounds */
-    --muted: 270 15% 96%;
-    --muted-foreground: 270 15% 45%;
+    --muted: 350 15% 96%;
+    --muted-foreground: 340 20% 45%;
 
-    /* Accent - Teal blend */
-    --accent: 160 50% 40%;
+    /* Accent - Warm rose blend */
+    --accent: 350 50% 45%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 160 50% 95%;
+    --accent-light: 350 50% 95%;
 
     /* Destructive - Muted red */
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 20% 90%;
-    --input: 270 20% 90%;
-    --ring: 270 50% 40%;
+    --border: 350 20% 90%;
+    --input: 350 20% 90%;
+    --ring: 340 60% 30%;
 
     --radius: 0.75rem;
 
@@ -56,49 +56,49 @@ All colors MUST be HSL - Purple & Green theme matching Dr. Prasanna's branding.
     --info: 200 80% 45%;
     --info-foreground: 0 0% 100%;
 
-    /* Sidebar - Dark purple */
-    --sidebar-background: 270 35% 18%;
-    --sidebar-foreground: 270 20% 98%;
-    --sidebar-primary: 150 60% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 35% 25%;
-    --sidebar-accent-foreground: 270 20% 98%;
-    --sidebar-border: 270 35% 28%;
-    --sidebar-ring: 150 60% 45%;
+    /* Sidebar - Dark burgundy */
+    --sidebar-background: 340 45% 18%;
+    --sidebar-foreground: 350 20% 98%;
+    --sidebar-primary: 0 70% 75%;
+    --sidebar-primary-foreground: 340 60% 20%;
+    --sidebar-accent: 340 45% 25%;
+    --sidebar-accent-foreground: 350 20% 98%;
+    --sidebar-border: 340 45% 28%;
+    --sidebar-ring: 0 70% 75%;
   }
 
   .dark {
-    --background: 270 30% 10%;
-    --foreground: 270 20% 98%;
+    --background: 340 30% 10%;
+    --foreground: 350 20% 98%;
 
-    --card: 270 30% 14%;
-    --card-foreground: 270 20% 98%;
+    --card: 340 30% 14%;
+    --card-foreground: 350 20% 98%;
 
-    --popover: 270 30% 14%;
-    --popover-foreground: 270 20% 98%;
+    --popover: 340 30% 14%;
+    --popover-foreground: 350 20% 98%;
 
-    --primary: 270 50% 55%;
+    --primary: 340 55% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 270 50% 60%;
-    --primary-light: 270 50% 20%;
+    --primary-hover: 340 55% 50%;
+    --primary-light: 340 55% 20%;
 
-    --secondary: 150 60% 45%;
+    --secondary: 0 60% 70%;
     --secondary-foreground: 0 0% 100%;
-    --secondary-light: 150 60% 18%;
+    --secondary-light: 0 60% 18%;
 
-    --muted: 270 30% 18%;
-    --muted-foreground: 270 15% 65%;
+    --muted: 340 30% 18%;
+    --muted-foreground: 340 15% 65%;
 
-    --accent: 160 50% 45%;
+    --accent: 350 50% 50%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 160 50% 18%;
+    --accent-light: 350 50% 18%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 30% 22%;
-    --input: 270 30% 22%;
-    --ring: 270 50% 55%;
+    --border: 340 30% 22%;
+    --input: 340 30% 22%;
+    --ring: 340 55% 45%;
 
     --success: 150 60% 45%;
     --success-foreground: 0 0% 100%;
@@ -107,14 +107,14 @@ All colors MUST be HSL - Purple & Green theme matching Dr. Prasanna's branding.
     --info: 200 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 270 35% 8%;
-    --sidebar-foreground: 270 20% 98%;
-    --sidebar-primary: 150 60% 50%;
+    --sidebar-background: 340 45% 8%;
+    --sidebar-foreground: 350 20% 98%;
+    --sidebar-primary: 0 60% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 35% 15%;
-    --sidebar-accent-foreground: 270 20% 98%;
-    --sidebar-border: 270 35% 18%;
-    --sidebar-ring: 150 60% 50%;
+    --sidebar-accent: 340 45% 15%;
+    --sidebar-accent-foreground: 350 20% 98%;
+    --sidebar-border: 340 45% 18%;
+    --sidebar-ring: 0 60% 65%;
   }
 }
 
