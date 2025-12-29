@@ -27,28 +27,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { email, password, fullName, setupKey } = body;
 
-    // Check if any users exist
-    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (listError) {
-      console.error("Error listing users:", listError);
-      throw listError;
-    }
-
-    console.log("Existing users count:", existingUsers.users.length);
-
-    // If users exist, return error - setup can only be done once
-    if (existingUsers.users.length > 0) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Setup already complete. Users already exist in the system.", 
-          existingCount: existingUsers.users.length,
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate setup key
+    // Validate setup key first
     if (!setupKey) {
       return new Response(
         JSON.stringify({ error: "Setup key is required" }),
@@ -95,7 +74,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Creating first admin user:", email);
+    console.log("Creating admin user:", email);
 
     // Create user in auth
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
