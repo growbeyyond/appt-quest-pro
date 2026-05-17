@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Clock, Save, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ConflictDetectionDialog } from "@/components/ConflictDetectionDialog";
+import { BillingPanel } from "@/components/BillingPanel";
 
 const AppointmentDetail = () => {
   const { id } = useParams();
@@ -408,6 +409,12 @@ const AppointmentDetail = () => {
               </div>
             </CardContent>
           </Card>
+
+          {!isNew && formData.patient_id && formData.branch_id && (
+            <div className="mt-6">
+              <BillingPanel appointmentId={id!} patientId={formData.patient_id} branchId={formData.branch_id} />
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 mt-6">
             <Button type="button" variant="outline" onClick={() => navigate("/appointments")}>
