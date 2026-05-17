@@ -18,6 +18,8 @@ import { PatientPhotoUpload } from "@/components/PatientPhotoUpload";
 import { ConsentCapture } from "@/components/ConsentCapture";
 import { MedicalHistoryManager } from "@/components/MedicalHistoryManager";
 import { PrescriptionManager } from "@/components/PrescriptionManager";
+import { VitalsManager } from "@/components/VitalsManager";
+import { AllergiesManager } from "@/components/AllergiesManager";
 import { PatientAppointmentHistory } from "@/components/PatientAppointmentHistory";
 import { PatientPortalLinkDialog } from "@/components/PatientPortalLinkDialog";
 
@@ -449,6 +451,8 @@ const PatientDetail = () => {
             {!isNew && (
               <TabsContent value="medical">
                 <div className="space-y-6">
+                  <VitalsManager patientId={id!} />
+                  <AllergiesManager patientId={id!} />
                   <MedicalHistoryManager patientId={id!} />
                   <PrescriptionManager 
                     patientId={id!} 

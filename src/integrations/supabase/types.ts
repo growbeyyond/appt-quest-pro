@@ -261,6 +261,60 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount_paid: number
+          appointment_id: string | null
+          branch_id: string
+          consultation_fee: number
+          created_at: string
+          created_by: string | null
+          discount: number
+          id: string
+          notes: string | null
+          other_charges: number
+          patient_id: string
+          status: string
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          appointment_id?: string | null
+          branch_id: string
+          consultation_fee?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          other_charges?: number
+          patient_id: string
+          status?: string
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          appointment_id?: string | null
+          branch_id?: string
+          consultation_fee?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          id?: string
+          notes?: string | null
+          other_charges?: number
+          patient_id?: string
+          status?: string
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medical_history: {
         Row: {
           appointment_id: string | null
@@ -375,6 +429,42 @@ export type Database = {
           },
         ]
       }
+      patient_allergies: {
+        Row: {
+          allergen: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          reaction: string | null
+          severity: string | null
+          updated_at: string
+        }
+        Insert: {
+          allergen: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          reaction?: string | null
+          severity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allergen?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          reaction?: string | null
+          severity?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_portal_access: {
         Row: {
           created_at: string | null
@@ -409,6 +499,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      patient_vitals: {
+        Row: {
+          appointment_id: string | null
+          bmi: number | null
+          bp_diastolic: number | null
+          bp_systolic: number | null
+          created_at: string
+          height_cm: number | null
+          id: string
+          notes: string | null
+          patient_id: string
+          pulse: number | null
+          recorded_at: string
+          recorded_by: string | null
+          spo2: number | null
+          temperature_c: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          bmi?: number | null
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          pulse?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          spo2?: number | null
+          temperature_c?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          appointment_id?: string | null
+          bmi?: number | null
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          pulse?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          spo2?: number | null
+          temperature_c?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: []
       }
       patients: {
         Row: {
@@ -498,6 +642,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          method: string
+          notes: string | null
+          paid_at: string
+          received_by: string | null
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          method?: string
+          notes?: string | null
+          paid_at?: string
+          received_by?: string | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          method?: string
+          notes?: string | null
+          paid_at?: string
+          received_by?: string | null
+          reference?: string | null
+        }
+        Relationships: []
       }
       prescription_items: {
         Row: {
