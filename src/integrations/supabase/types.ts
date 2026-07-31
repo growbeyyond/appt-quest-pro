@@ -575,6 +575,7 @@ export type Database = {
           insurance_provider: string | null
           last_name: string
           notes: string | null
+          patient_number: string
           phone: string
           photo_thumbnail_url: string | null
           photo_url: string | null
@@ -601,6 +602,7 @@ export type Database = {
           insurance_provider?: string | null
           last_name: string
           notes?: string | null
+          patient_number?: string
           phone: string
           photo_thumbnail_url?: string | null
           photo_url?: string | null
@@ -627,6 +629,7 @@ export type Database = {
           insurance_provider?: string | null
           last_name?: string
           notes?: string | null
+          patient_number?: string
           phone?: string
           photo_thumbnail_url?: string | null
           photo_url?: string | null
