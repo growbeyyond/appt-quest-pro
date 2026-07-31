@@ -34,6 +34,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id)
+          .limit(1)
           .maybeSingle();
 
         setUserRole(roleData?.role || null);
