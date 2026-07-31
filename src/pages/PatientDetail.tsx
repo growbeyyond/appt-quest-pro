@@ -31,12 +31,14 @@ const PatientDetail = () => {
 
   const [loading, setLoading] = useState(false);
   const [patientNumber, setPatientNumber] = useState<string | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
   const [consentCaptureOpen, setConsentCaptureOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
+    branch_id: "",
     email: "",
     phone: "",
     date_of_birth: "",
@@ -61,10 +63,23 @@ const PatientDetail = () => {
   const { signedUrl: consentSignedUrl } = useSignedUrl('patient-files', formData.consent_document_url);
 
   useEffect(() => {
+    loadBranches();
     if (!isNew && id) {
       loadPatient();
     }
   }, [id]);
+
+  const loadBranches = async () => {
+    const { data } = await supabase
+      .from("branches")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setBranches(data || []);
+    if (isNew && data && data.length === 1) {
+      setFormData((prev) => ({ ...prev, branch_id: data[0].id }));
+    }
+  };
 
   const loadPatient = async () => {
     try {
