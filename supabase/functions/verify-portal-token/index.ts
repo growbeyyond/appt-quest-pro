@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const sha256 = async (value: string) => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+};
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -31,10 +38,11 @@ Deno.serve(async (req) => {
     );
 
     // Verify token and check expiration
+    const tokenHash = await sha256(token);
     const { data: portalAccess, error: accessError } = await supabaseAdmin
       .from("patient_portal_access")
       .select("patient_id, token_expires_at, last_login_at")
-      .eq("login_token", token)
+      .eq("login_token", tokenHash)
       .single();
 
     if (accessError || !portalAccess) {
