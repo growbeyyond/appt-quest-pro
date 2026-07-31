@@ -32,6 +32,7 @@ export default function PatientPortal() {
   const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([]);
   const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("appointments");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -89,8 +90,9 @@ export default function PatientPortal() {
     }
   };
 
-  const handleRescheduleRequest = async (appointmentId: string) => {
+  const handleRescheduleRequest = (appointmentId: string) => {
     setRescheduleForm({ ...rescheduleForm, appointmentId });
+    setActiveTab("reschedule");
   };
 
   const handleCancelAppointment = (appointmentId: string) => {
@@ -303,7 +305,7 @@ export default function PatientPortal() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="appointments" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="bg-card border border-primary/20">
             <TabsTrigger value="appointments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Calendar className="mr-2 h-4 w-4" />
