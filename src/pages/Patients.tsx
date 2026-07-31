@@ -43,7 +43,8 @@ const Patients = () => {
       patient.first_name?.toLowerCase().includes(search) ||
       patient.last_name?.toLowerCase().includes(search) ||
       patient.phone?.includes(search) ||
-      patient.email?.toLowerCase().includes(search)
+      patient.email?.toLowerCase().includes(search) ||
+      patient.patient_number?.toLowerCase().includes(search)
     );
   });
 
@@ -61,6 +62,7 @@ const Patients = () => {
       if (error) throw error;
 
       const exportData = data.map((patient) => ({
+        "Patient ID": patient.patient_number,
         "First Name": patient.first_name,
         "Last Name": patient.last_name,
         Phone: patient.phone,
@@ -234,6 +236,7 @@ const Patients = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, phone, or email..."
+                aria-label="Search patients"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -269,9 +272,16 @@ const Patients = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium">
-                        {patient.first_name} {patient.last_name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">
+                          {patient.first_name} {patient.last_name}
+                        </p>
+                        {patient.patient_number && (
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {patient.patient_number}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground truncate">
                         {patient.phone} {patient.email && `• ${patient.email}`}
                       </p>
