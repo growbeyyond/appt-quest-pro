@@ -105,11 +105,33 @@ const PatientDetail = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.branch_id) {
+      toast({
+        title: "Branch required",
+        description: "Select a branch so the right staff can access this patient.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
 
     try {
       if (isNew) {
         const { data: { user } } = await supabase.auth.getUser();
+        const { data: existing } = await supabase
+          .from("patients")
+          .select("id, patient_number, first_name, last_name")
+          .eq("phone", formData.phone)
+          .maybeSingle();
+        if (existing) {
+          toast({
+            title: "Duplicate phone number",
+            description: `${existing.patient_number} — ${existing.first_name} ${existing.last_name} already uses this number.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.from("patients").insert({
           ...formData,
           created_by: user?.id,
