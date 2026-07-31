@@ -103,11 +103,29 @@ const Patients = () => {
 
     try {
       const data = await file.arrayBuffer();
+      const { data: branchRows } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      const defaultBranchId = branchRows?.[0]?.id;
+      if (!defaultBranchId) {
+        toast({
+          title: "Import Failed",
+          description: "No active branch found. Create a branch before importing patients.",
+          variant: "destructive",
+        });
+        return;
+      }
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       const patientsToImport = jsonData.map((row: any) => ({
+        branch_id:
+          branchRows?.find(
+            (b) => b.name.toLowerCase() === String(row["Branch"] || row["branch"] || "").toLowerCase()
+          )?.id || defaultBranchId,
         first_name: row["First Name"] || row["first_name"],
         last_name: row["Last Name"] || row["last_name"],
         phone: row["Phone"] || row["phone"],
