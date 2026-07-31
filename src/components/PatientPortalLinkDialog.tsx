@@ -45,7 +45,7 @@ export function PatientPortalLinkDialog({
         .from("patient_portal_access")
         .select("id")
         .eq("patient_id", patientId)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         // Update existing token
