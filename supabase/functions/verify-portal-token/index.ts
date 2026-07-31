@@ -12,7 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, action } = await req.json();
+    const body = await req.json();
+    const { token, action } = body;
 
     if (!token) {
       console.log("Missing token in request");
@@ -158,7 +159,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submit_reschedule") {
-      const { appointmentId, requestedDate, requestedTime, reason } = await req.json();
+      const { appointmentId, requestedDate, requestedTime, reason } = body;
       
       if (!appointmentId || !requestedDate || !requestedTime || !reason) {
         return new Response(
@@ -207,7 +208,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "cancel_appointment") {
-      const { appointmentId, cancelReason } = await req.json();
+      const { appointmentId, cancelReason } = body;
       
       if (!appointmentId) {
         return new Response(

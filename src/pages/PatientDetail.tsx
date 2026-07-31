@@ -126,6 +126,7 @@ const PatientDetail = () => {
     try {
       if (isNew) {
         const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Your session has expired. Please sign in again.");
         const { data: existing } = await supabase
           .from("patients")
           .select("id, patient_number, first_name, last_name")
@@ -143,7 +144,7 @@ const PatientDetail = () => {
         }
         const { error } = await supabase.from("patients").insert({
           ...formData,
-          created_by: user?.id,
+          created_by: user.id,
         });
         if (error) throw error;
         toast({
@@ -151,6 +152,16 @@ const PatientDetail = () => {
           description: "Patient created successfully",
         });
       } else {
+        const { data: existing } = await supabase
+          .from("patients")
+          .select("id, patient_number, first_name, last_name")
+          .eq("phone", formData.phone)
+          .neq("id", id || "")
+          .limit(1)
+          .maybeSingle();
+        if (existing) {
+          throw new Error(`${existing.patient_number} — ${existing.first_name} ${existing.last_name} already uses this phone number.`);
+        }
         const { error } = await supabase
           .from("patients")
           .update(formData)

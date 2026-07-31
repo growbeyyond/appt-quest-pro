@@ -64,20 +64,10 @@ export default function RescheduleRequests() {
       const { data: { user } } = await supabase.auth.getUser();
       const request = requests.find(r => r.id === requestId);
 
-      // Update reschedule request status
-      const { error } = await supabase
-        .from("reschedule_requests")
-        .update({
-          status,
-          processed_by: user?.id,
-          processed_at: new Date().toISOString(),
-          notes: staffNotes
-        })
-        .eq("id", requestId);
+      if (!user) throw new Error("Your session has expired. Please sign in again.");
 
-      if (error) throw error;
-
-      // If approved, update the appointment with new date/time
+      // Update the appointment first so a failed appointment change cannot leave
+      // a request incorrectly marked as approved.
       if (status === "approved" && request) {
         const { error: appointmentError } = await supabase
           .from("appointments")
@@ -89,16 +79,25 @@ export default function RescheduleRequests() {
           .eq("id", request.appointment_id);
 
         if (appointmentError) {
-          console.error("Error updating appointment:", appointmentError);
-          toast.error("Request approved but failed to update appointment");
-        } else {
-          // Send WhatsApp notification to patient
-          if (request.patient?.phone) {
-            const message = `Hi ${request.patient.first_name}, your reschedule request has been approved! Your new appointment is on ${format(new Date(request.requested_date), "MMM d, yyyy")} at ${request.requested_time}. Thank you!`;
-            const whatsappUrl = `https://wa.me/${request.patient.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-          }
+          throw appointmentError;
         }
+      }
+
+      const { error } = await supabase
+        .from("reschedule_requests")
+        .update({
+          status,
+          processed_by: user.id,
+          processed_at: new Date().toISOString(),
+          notes: staffNotes
+        })
+        .eq("id", requestId);
+      if (error) throw error;
+
+      if (status === "approved" && request?.patient?.phone) {
+        const message = `Hi ${request.patient.first_name}, your reschedule request has been approved! Your new appointment is on ${format(new Date(request.requested_date), "MMM d, yyyy")} at ${request.requested_time}. Thank you!`;
+        const whatsappUrl = `https://wa.me/${request.patient.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
       }
 
       toast.success(`Request ${status} successfully${status === "approved" ? " - Appointment updated" : ""}`);
