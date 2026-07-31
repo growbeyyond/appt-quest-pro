@@ -30,6 +30,7 @@ const PatientDetail = () => {
   const isNew = id === "new";
 
   const [loading, setLoading] = useState(false);
+  const [patientNumber, setPatientNumber] = useState<string | null>(null);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
   const [consentCaptureOpen, setConsentCaptureOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
@@ -74,7 +75,10 @@ const PatientDetail = () => {
         .single();
 
       if (error) throw error;
-      if (data) setFormData(data);
+      if (data) {
+        setFormData(data);
+        setPatientNumber((data as any).patient_number ?? null);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -168,9 +172,14 @@ const PatientDetail = () => {
             <h1 className="text-3xl font-bold">
               {isNew ? "New Patient" : "Patient Details"}
             </h1>
-            <p className="text-muted-foreground">
-              {isNew ? "Add a new patient to the system" : "View and edit patient information"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-muted-foreground">
+                {isNew ? "Add a new patient to the system" : "View and edit patient information"}
+              </p>
+              {!isNew && patientNumber && (
+                <Badge variant="outline" className="font-mono">{patientNumber}</Badge>
+              )}
+            </div>
           </div>
         </div>
 
