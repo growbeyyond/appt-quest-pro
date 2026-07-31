@@ -87,13 +87,21 @@ const PatientDetail = () => {
         .from("patients")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      if (data) {
-        setFormData(data);
-        setPatientNumber((data as any).patient_number ?? null);
+      if (!data) {
+        toast({
+          title: "Patient not found",
+          description: "This patient does not exist or you do not have access to it.",
+          variant: "destructive",
+        });
+        navigate("/patients");
+        return;
       }
+      const { id: _id, patient_number, created_at, updated_at, created_by, ...editable } = data as any;
+      setFormData((prev) => ({ ...prev, ...editable }));
+      setPatientNumber(patient_number ?? null);
     } catch (error: any) {
       toast({
         title: "Error",
