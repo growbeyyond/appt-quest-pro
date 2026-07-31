@@ -285,6 +285,22 @@ const PatientDetail = () => {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="branch_id">Branch *</Label>
+                      <Select
+                        value={formData.branch_id || ""}
+                        onValueChange={(value) => setFormData({ ...formData, branch_id: value })}
+                      >
+                        <SelectTrigger id="branch_id">
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
