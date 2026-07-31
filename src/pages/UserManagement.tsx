@@ -148,12 +148,13 @@ const UserManagement = () => {
 
       // Assign branches if selected
       if (newUserBranches.length > 0 && data?.userId) {
-        for (const branchId of newUserBranches) {
-          await supabase.from("user_branch_assignments").insert({
+        const { error: branchError } = await supabase.from("user_branch_assignments").insert(
+          newUserBranches.map((branchId) => ({
             user_id: data.userId,
             branch_id: branchId,
-          });
-        }
+          }))
+        );
+        if (branchError) throw new Error(`User was created, but branch assignment failed: ${branchError.message}`);
       }
 
       toast({
@@ -232,10 +233,11 @@ const UserManagement = () => {
 
     try {
       // Delete existing assignments
-      await supabase
+      const { error: deleteError } = await supabase
         .from("user_branch_assignments")
         .delete()
         .eq("user_id", selectedUser.id);
+      if (deleteError) throw deleteError;
 
       // Insert new assignments
       if (selectedBranches.length > 0) {
@@ -316,7 +318,7 @@ const UserManagement = () => {
                     minLength={8}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Minimum 8 characters
+                    8+ characters with uppercase, lowercase, number, and special character
                   </p>
                 </div>
                 <div className="space-y-2">

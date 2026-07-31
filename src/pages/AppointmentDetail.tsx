@@ -56,10 +56,12 @@ const AppointmentDetail = () => {
   const loadData = async () => {
     try {
       const [patientsRes, branchesRes] = await Promise.all([
-        supabase.from("patients").select("id, first_name, last_name").order("first_name"),
+        supabase.from("patients").select("id, first_name, last_name, branch_id").order("first_name"),
         supabase.from("branches").select("*").eq("is_active", true),
       ]);
 
+      if (patientsRes.error) throw patientsRes.error;
+      if (branchesRes.error) throw branchesRes.error;
       setPatients(patientsRes.data || []);
       setBranches(branchesRes.data || []);
 
@@ -101,10 +103,15 @@ const AppointmentDetail = () => {
         .from("appointments")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      if (data) setFormData(data);
+      if (!data) {
+        toast({ title: "Appointment not found", description: "It may have been removed or you may not have access.", variant: "destructive" });
+        navigate("/appointments");
+        return;
+      }
+      setFormData(data);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -130,7 +137,8 @@ const AppointmentDetail = () => {
       .eq('branch_id', formData.branch_id)
       .in('status', ['scheduled', 'checked_in', 'in_consultation']);
 
-    if (error || !data) return false;
+    if (error) throw error;
+    if (!data) return false;
 
     const conflicts = data.filter((appt) => {
       if (!isNew && appt.id === id) return false;
@@ -165,23 +173,35 @@ const AppointmentDetail = () => {
     setLoading(true);
 
     try {
+      const selectedPatient = patients.find((patient) => patient.id === formData.patient_id);
+      if (selectedPatient?.branch_id && selectedPatient.branch_id !== formData.branch_id) {
+        throw new Error("The appointment branch must match the patient’s branch");
+      }
       if (isNew) {
         const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Your session has expired. Please sign in again.");
         const { data: newAppointment, error } = await supabase.from("appointments").insert({
           ...formData,
-          created_by: user?.id,
-        }).select().single();
+          created_by: user.id,
+        }).select().maybeSingle();
         if (error) throw error;
 
         // If created from waitlist, update the waitlist entry
         if (waitlistId && newAppointment) {
-          await supabase
+          const { error: waitlistError } = await supabase
             .from("waitlist")
             .update({
               status: "scheduled",
               scheduled_appointment_id: newAppointment.id,
             })
             .eq("id", waitlistId);
+          if (waitlistError) {
+            toast({
+              title: "Appointment created",
+              description: "The waitlist entry could not be updated. Please update it manually.",
+              variant: "destructive",
+            });
+          }
         }
 
         toast({
@@ -248,7 +268,10 @@ const AppointmentDetail = () => {
                   <Label htmlFor="patient_id">Patient *</Label>
                   <Select 
                     value={formData.patient_id} 
-                    onValueChange={(value) => setFormData({ ...formData, patient_id: value })}
+                    onValueChange={(value) => {
+                      const patient = patients.find((item) => item.id === value);
+                      setFormData({ ...formData, patient_id: value, branch_id: patient?.branch_id || formData.branch_id });
+                    }}
                     required
                   >
                     <SelectTrigger>

@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Patients from "./pages/Patients";
@@ -38,7 +37,7 @@ const App = () => (
           {/* Public routes */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/admin" element={<Setup />} />
+          <Route path="/admin" element={<Navigate to="/auth" replace />} />
           <Route path="/patient-portal" element={<PatientPortal />} />
 
           {/* Protected routes - All authenticated users */}

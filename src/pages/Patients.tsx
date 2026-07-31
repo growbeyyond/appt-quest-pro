@@ -24,11 +24,12 @@ const Patients = () => {
 
   const loadPatients = async () => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("patients")
         .select("*")
         .order("created_at", { ascending: false });
 
+      if (error) throw error;
       setPatients(data || []);
     } catch (error) {
       console.error("Error loading patients:", error);
@@ -103,11 +104,12 @@ const Patients = () => {
 
     try {
       const data = await file.arrayBuffer();
-      const { data: branchRows } = await supabase
+      const { data: branchRows, error: branchError } = await supabase
         .from("branches")
         .select("id, name")
         .eq("is_active", true)
         .order("name");
+      if (branchError) throw branchError;
       const defaultBranchId = branchRows?.[0]?.id;
       if (!defaultBranchId) {
         toast({
@@ -128,7 +130,7 @@ const Patients = () => {
           )?.id || defaultBranchId,
         first_name: row["First Name"] || row["first_name"],
         last_name: row["Last Name"] || row["last_name"],
-        phone: row["Phone"] || row["phone"],
+        phone: String(row["Phone"] || row["phone"] || "").trim(),
         email: row["Email"] || row["email"] || null,
         gender: row["Gender"] || row["gender"] || null,
         date_of_birth: row["Date of Birth"] || row["date_of_birth"] || null,
@@ -155,7 +157,8 @@ const Patients = () => {
       }
 
       // Check for duplicate phone numbers within the import file
-      const phoneNumbers = validPatients.map(p => p.phone);
+      const phoneNumbers = validPatients.map(p => p.phone.replace(/\D/g, ""));
+      validPatients.forEach((patient, index) => { patient.phone = phoneNumbers[index]; });
       const duplicatesInFile = phoneNumbers.filter((phone, index) => 
         phoneNumbers.indexOf(phone) !== index
       );

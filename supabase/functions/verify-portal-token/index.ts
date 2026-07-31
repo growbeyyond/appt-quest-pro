@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const sha256 = async (value: string) => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+};
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -12,7 +19,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, action } = await req.json();
+    const body = await req.json();
+    const { token, action } = body;
 
     if (!token) {
       console.log("Missing token in request");
@@ -30,10 +38,11 @@ Deno.serve(async (req) => {
     );
 
     // Verify token and check expiration
+    const tokenHash = await sha256(token);
     const { data: portalAccess, error: accessError } = await supabaseAdmin
       .from("patient_portal_access")
       .select("patient_id, token_expires_at, last_login_at")
-      .eq("login_token", token)
+      .eq("login_token", tokenHash)
       .single();
 
     if (accessError || !portalAccess) {
@@ -158,7 +167,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "submit_reschedule") {
-      const { appointmentId, requestedDate, requestedTime, reason } = await req.json();
+      const { appointmentId, requestedDate, requestedTime, reason } = body;
       
       if (!appointmentId || !requestedDate || !requestedTime || !reason) {
         return new Response(
@@ -207,7 +216,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "cancel_appointment") {
-      const { appointmentId, cancelReason } = await req.json();
+      const { appointmentId, cancelReason } = body;
       
       if (!appointmentId) {
         return new Response(

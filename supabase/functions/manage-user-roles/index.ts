@@ -16,6 +16,14 @@ interface ManageRoleRequest {
   role?: string;
 }
 
+const validRoles = ["admin", "doctor", "receptionist"] as const;
+const passwordIsStrong = (password: string) =>
+  password.length >= 8 &&
+  /[a-z]/.test(password) &&
+  /[A-Z]/.test(password) &&
+  /\d/.test(password) &&
+  /[^A-Za-z0-9]/.test(password);
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -52,7 +60,8 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (roleError || roleData?.role !== "admin") {
       throw new Error("Forbidden: Admin role required");
@@ -78,9 +87,11 @@ serve(async (req) => {
         }
 
         // Validate role before creating user
-        const validRoles = ['admin', 'doctor', 'receptionist'];
-        if (!validRoles.includes(role)) {
+        if (!validRoles.includes(role as typeof validRoles[number])) {
           throw new Error(`Invalid role: ${role}. Must be one of: ${validRoles.join(', ')}`);
+        }
+        if (!passwordIsStrong(password)) {
+          throw new Error("Password must contain at least 8 characters, including uppercase, lowercase, number, and special character");
         }
 
         // Create user in auth - the handle_new_user trigger will automatically create the profile
@@ -137,6 +148,9 @@ serve(async (req) => {
         if (!userId || !role) {
           throw new Error("Missing userId or role");
         }
+        if (!validRoles.includes(role as typeof validRoles[number])) {
+          throw new Error("Invalid role");
+        }
 
         const { error: insertError } = await supabaseAdmin
           .from("user_roles")
@@ -155,6 +169,9 @@ serve(async (req) => {
       case "change_role": {
         if (!userId || !role) {
           throw new Error("Missing userId or role");
+        }
+        if (!validRoles.includes(role as typeof validRoles[number])) {
+          throw new Error("Invalid role");
         }
 
         // Delete existing role
@@ -202,8 +219,8 @@ serve(async (req) => {
           throw new Error("Missing userId or password");
         }
 
-        if (password.length < 8) {
-          throw new Error("Password must be at least 8 characters");
+        if (!passwordIsStrong(password)) {
+          throw new Error("Password must contain at least 8 characters, including uppercase, lowercase, number, and special character");
         }
 
         const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -224,6 +241,9 @@ serve(async (req) => {
         if (!userId) {
           throw new Error("Missing userId");
         }
+        if (userId === user.id) {
+          throw new Error("You cannot delete your own account");
+        }
 
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
         if (deleteError) throw deleteError;
@@ -234,22 +254,7 @@ serve(async (req) => {
       }
 
       case "delete_all_users": {
-        const { data: allUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        if (listError) throw listError;
-
-        const deletedUsers: string[] = [];
-        for (const u of allUsers.users) {
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(u.id);
-          if (deleteError) {
-            console.error("Failed to delete user:", u.id, deleteError);
-          } else {
-            deletedUsers.push(u.email || u.id);
-          }
-        }
-
-        result = { success: true, deletedCount: deletedUsers.length, deletedUsers };
-        console.log("All users deleted:", deletedUsers);
-        break;
+        throw new Error("Bulk deletion of all users is disabled");
       }
 
       default:
@@ -260,12 +265,13 @@ serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
     console.error("Error in manage-user-roles:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       {
-        status: error.message === "Unauthorized" ? 401 : error.message === "Forbidden: Admin role required" ? 403 : 500,
+        status: message === "Unauthorized" || message === "Missing authorization header" ? 401 : message === "Forbidden: Admin role required" ? 403 : 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

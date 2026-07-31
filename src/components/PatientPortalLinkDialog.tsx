@@ -37,6 +37,11 @@ export function PatientPortalLinkDialog({
     try {
       // Generate a unique token
       const token = crypto.randomUUID();
+      const tokenBytes = new TextEncoder().encode(token);
+      const tokenDigest = await crypto.subtle.digest("SHA-256", tokenBytes);
+      const tokenHash = Array.from(new Uint8Array(tokenDigest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // Token valid for 7 days
 
@@ -52,7 +57,7 @@ export function PatientPortalLinkDialog({
         const { error } = await supabase
           .from("patient_portal_access")
           .update({
-            login_token: token,
+            login_token: tokenHash,
             token_expires_at: expiresAt.toISOString(),
           })
           .eq("patient_id", patientId);
@@ -64,7 +69,7 @@ export function PatientPortalLinkDialog({
           .from("patient_portal_access")
           .insert({
             patient_id: patientId,
-            login_token: token,
+            login_token: tokenHash,
             token_expires_at: expiresAt.toISOString(),
           });
 

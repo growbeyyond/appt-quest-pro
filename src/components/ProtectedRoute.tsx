@@ -18,6 +18,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -49,10 +50,13 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         if (!session) {
           setIsAuthenticated(false);
           setUserRole(null);
+          setLoading(false);
+        } else {
+          void checkAuth();
         }
       }
     );

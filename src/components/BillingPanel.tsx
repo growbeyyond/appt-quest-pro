@@ -46,10 +46,18 @@ export const BillingPanel = ({ appointmentId, patientId, branchId }: { appointme
   const [pay, setPay] = useState({ amount: "", method: "cash", reference: "" });
 
   const load = async () => {
-    const { data } = await (supabase as any).from("invoices").select("*").eq("appointment_id", appointmentId).maybeSingle();
+    const { data, error } = await (supabase as any).from("invoices").select("*").eq("appointment_id", appointmentId).maybeSingle();
+    if (error) {
+      toast({ title: "Unable to load billing", description: error.message, variant: "destructive" });
+      return;
+    }
     setInvoice(data);
     if (data) {
-      const { data: pays } = await (supabase as any).from("payments").select("*").eq("invoice_id", data.id).order("paid_at", { ascending: false });
+      const { data: pays, error: paymentsError } = await (supabase as any).from("payments").select("*").eq("invoice_id", data.id).order("paid_at", { ascending: false });
+      if (paymentsError) {
+        toast({ title: "Unable to load payments", description: paymentsError.message, variant: "destructive" });
+        return;
+      }
       setPayments(pays || []);
     } else {
       setPayments([]);
@@ -66,6 +74,9 @@ export const BillingPanel = ({ appointmentId, patientId, branchId }: { appointme
       const tax = parseFloat(inv.tax) || 0;
       const other = parseFloat(inv.other_charges) || 0;
       const total = fee + tax + other - disc;
+      if (fee < 0 || disc < 0 || tax < 0 || other < 0 || total < 0) {
+        throw new Error("Amounts cannot be negative and discount cannot exceed the charges");
+      }
       const { error } = await (supabase as any).from("invoices").insert({
         appointment_id: appointmentId,
         patient_id: patientId,
@@ -93,9 +104,13 @@ export const BillingPanel = ({ appointmentId, patientId, branchId }: { appointme
     if (!invoice) return;
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const amount = parseFloat(pay.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > balance) {
+        throw new Error("Payment must be greater than zero and cannot exceed the balance");
+      }
       const { error } = await (supabase as any).from("payments").insert({
         invoice_id: invoice.id,
-        amount: parseFloat(pay.amount),
+        amount,
         method: pay.method,
         reference: pay.reference || null,
         received_by: user?.id,
@@ -161,7 +176,7 @@ export const BillingPanel = ({ appointmentId, patientId, branchId }: { appointme
                   <DialogContent>
                     <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
                     <form onSubmit={addPayment} className="space-y-3">
-                      <div className="space-y-1"><Label>Amount (₹) *</Label><Input required type="number" step="0.01" max={balance} value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></div>
+                      <div className="space-y-1"><Label>Amount (₹) *</Label><Input required type="number" min="0.01" step="0.01" max={balance} value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} /></div>
                       <div className="space-y-1">
                         <Label>Method</Label>
                         <Select value={pay.method} onValueChange={(v) => setPay({ ...pay, method: v })}>
