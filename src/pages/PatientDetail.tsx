@@ -31,12 +31,14 @@ const PatientDetail = () => {
 
   const [loading, setLoading] = useState(false);
   const [patientNumber, setPatientNumber] = useState<string | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
   const [consentCaptureOpen, setConsentCaptureOpen] = useState(false);
   const [portalLinkOpen, setPortalLinkOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
+    branch_id: "",
     email: "",
     phone: "",
     date_of_birth: "",
@@ -61,10 +63,23 @@ const PatientDetail = () => {
   const { signedUrl: consentSignedUrl } = useSignedUrl('patient-files', formData.consent_document_url);
 
   useEffect(() => {
+    loadBranches();
     if (!isNew && id) {
       loadPatient();
     }
   }, [id]);
+
+  const loadBranches = async () => {
+    const { data } = await supabase
+      .from("branches")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+    setBranches(data || []);
+    if (isNew && data && data.length === 1) {
+      setFormData((prev) => ({ ...prev, branch_id: data[0].id }));
+    }
+  };
 
   const loadPatient = async () => {
     try {
@@ -90,11 +105,33 @@ const PatientDetail = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.branch_id) {
+      toast({
+        title: "Branch required",
+        description: "Select a branch so the right staff can access this patient.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
 
     try {
       if (isNew) {
         const { data: { user } } = await supabase.auth.getUser();
+        const { data: existing } = await supabase
+          .from("patients")
+          .select("id, patient_number, first_name, last_name")
+          .eq("phone", formData.phone)
+          .maybeSingle();
+        if (existing) {
+          toast({
+            title: "Duplicate phone number",
+            description: `${existing.patient_number} — ${existing.first_name} ${existing.last_name} already uses this number.`,
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
         const { error } = await supabase.from("patients").insert({
           ...formData,
           created_by: user?.id,
@@ -246,6 +283,22 @@ const PatientDetail = () => {
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         required
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="branch_id">Branch *</Label>
+                      <Select
+                        value={formData.branch_id || ""}
+                        onValueChange={(value) => setFormData({ ...formData, branch_id: value })}
+                      >
+                        <SelectTrigger id="branch_id">
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
