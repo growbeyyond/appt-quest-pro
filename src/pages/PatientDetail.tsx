@@ -130,6 +130,7 @@ const PatientDetail = () => {
           .from("patients")
           .select("id, patient_number, first_name, last_name")
           .eq("phone", formData.phone)
+          .limit(1)
           .maybeSingle();
         if (existing) {
           toast({
