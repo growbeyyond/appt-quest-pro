@@ -235,7 +235,7 @@ const Patients = () => {
             <div className="relative mt-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, phone, or email..."
+                placeholder="Search by ID, name, phone, or email..."
                 aria-label="Search patients"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
