@@ -62,6 +62,7 @@ const Dashboard = () => {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
+        .limit(1)
         .maybeSingle();
 
       setUserRole(roleData?.role || null);
