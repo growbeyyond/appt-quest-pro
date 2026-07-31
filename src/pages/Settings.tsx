@@ -60,12 +60,13 @@ const Settings = () => {
       .from("profiles")
       .select("*")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
+      .limit(1)
       .maybeSingle();
 
     if (data) {
@@ -89,7 +90,7 @@ const Settings = () => {
         .from("app_settings")
         .select("value")
         .eq("key", "setup_secret_key")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (data) {

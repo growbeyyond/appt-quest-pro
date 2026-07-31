@@ -57,7 +57,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         .from("profiles")
         .select("*")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
       setProfile(profileData);
 
       // Get user role
@@ -65,7 +65,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
       setUserRole(roleData?.role || null);
     };
 
