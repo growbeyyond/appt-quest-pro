@@ -188,6 +188,170 @@ export type Database = {
         }
         Relationships: []
       }
+      case_records: {
+        Row: {
+          appetite_desires: string | null
+          appointment_id: string | null
+          aversions: string | null
+          case_date: string
+          case_type: string
+          chief_complaints: string | null
+          complaint_duration: string | null
+          complaint_onset: string | null
+          constitution: string | null
+          created_at: string
+          diagnosis: string | null
+          doctor_id: string | null
+          emotionals: string | null
+          family_history: string | null
+          id: string
+          intensity: number | null
+          investigations: string | null
+          menstrual_history: string | null
+          mentals: string | null
+          miasm: string | null
+          modalities_better: string | null
+          modalities_worse: string | null
+          observations: string | null
+          past_history: string | null
+          patient_id: string
+          personal_history: string | null
+          perspiration: string | null
+          physical_generals: string | null
+          sleep_dreams: string | null
+          stool_urine: string | null
+          thermal_reaction: string | null
+          thirst: string | null
+          treatment_history: string | null
+          updated_at: string
+        }
+        Insert: {
+          appetite_desires?: string | null
+          appointment_id?: string | null
+          aversions?: string | null
+          case_date?: string
+          case_type?: string
+          chief_complaints?: string | null
+          complaint_duration?: string | null
+          complaint_onset?: string | null
+          constitution?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id?: string | null
+          emotionals?: string | null
+          family_history?: string | null
+          id?: string
+          intensity?: number | null
+          investigations?: string | null
+          menstrual_history?: string | null
+          mentals?: string | null
+          miasm?: string | null
+          modalities_better?: string | null
+          modalities_worse?: string | null
+          observations?: string | null
+          past_history?: string | null
+          patient_id: string
+          personal_history?: string | null
+          perspiration?: string | null
+          physical_generals?: string | null
+          sleep_dreams?: string | null
+          stool_urine?: string | null
+          thermal_reaction?: string | null
+          thirst?: string | null
+          treatment_history?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appetite_desires?: string | null
+          appointment_id?: string | null
+          aversions?: string | null
+          case_date?: string
+          case_type?: string
+          chief_complaints?: string | null
+          complaint_duration?: string | null
+          complaint_onset?: string | null
+          constitution?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id?: string | null
+          emotionals?: string | null
+          family_history?: string | null
+          id?: string
+          intensity?: number | null
+          investigations?: string | null
+          menstrual_history?: string | null
+          mentals?: string | null
+          miasm?: string | null
+          modalities_better?: string | null
+          modalities_worse?: string | null
+          observations?: string | null
+          past_history?: string | null
+          patient_id?: string
+          personal_history?: string | null
+          perspiration?: string | null
+          physical_generals?: string | null
+          sleep_dreams?: string | null
+          stool_urine?: string | null
+          thermal_reaction?: string | null
+          thirst?: string | null
+          treatment_history?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_records_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_rubrics: {
+        Row: {
+          case_record_id: string
+          chapter: string | null
+          created_at: string
+          grade: number | null
+          id: string
+          remedies: string | null
+          rubric: string
+        }
+        Insert: {
+          case_record_id: string
+          chapter?: string | null
+          created_at?: string
+          grade?: number | null
+          id?: string
+          remedies?: string | null
+          rubric: string
+        }
+        Update: {
+          case_record_id?: string
+          chapter?: string | null
+          created_at?: string
+          grade?: number | null
+          id?: string
+          remedies?: string | null
+          rubric?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_rubrics_case_record_id_fkey"
+            columns: ["case_record_id"]
+            isOneToOne: false
+            referencedRelation: "case_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       followups: {
         Row: {
           appointment_id: string | null
@@ -738,36 +902,45 @@ export type Database = {
       prescription_items: {
         Row: {
           created_at: string
+          dispensing_form: string | null
           dosage: string
           drug_name: string
           duration: string
           frequency: string
           id: string
           instructions: string | null
+          potency: string | null
           prescription_id: string
           quantity: string | null
+          repetition: string | null
         }
         Insert: {
           created_at?: string
+          dispensing_form?: string | null
           dosage: string
           drug_name: string
           duration: string
           frequency: string
           id?: string
           instructions?: string | null
+          potency?: string | null
           prescription_id: string
           quantity?: string | null
+          repetition?: string | null
         }
         Update: {
           created_at?: string
+          dispensing_form?: string | null
           dosage?: string
           drug_name?: string
           duration?: string
           frequency?: string
           id?: string
           instructions?: string | null
+          potency?: string | null
           prescription_id?: string
           quantity?: string | null
+          repetition?: string | null
         }
         Relationships: [
           {
@@ -818,37 +991,46 @@ export type Database = {
       prescriptions: {
         Row: {
           appointment_id: string | null
+          case_record_id: string | null
           created_at: string
           diagnosis: string | null
           doctor_id: string | null
+          follow_up_after: string | null
           id: string
           notes: string | null
           patient_id: string
           prescribed_date: string
+          remedy_rationale: string | null
           status: string | null
           updated_at: string
         }
         Insert: {
           appointment_id?: string | null
+          case_record_id?: string | null
           created_at?: string
           diagnosis?: string | null
           doctor_id?: string | null
+          follow_up_after?: string | null
           id?: string
           notes?: string | null
           patient_id: string
           prescribed_date?: string
+          remedy_rationale?: string | null
           status?: string | null
           updated_at?: string
         }
         Update: {
           appointment_id?: string | null
+          case_record_id?: string | null
           created_at?: string
           diagnosis?: string | null
           doctor_id?: string | null
+          follow_up_after?: string | null
           id?: string
           notes?: string | null
           patient_id?: string
           prescribed_date?: string
+          remedy_rationale?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -858,6 +1040,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_case_record_id_fkey"
+            columns: ["case_record_id"]
+            isOneToOne: false
+            referencedRelation: "case_records"
             referencedColumns: ["id"]
           },
           {
@@ -895,6 +1084,79 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      remedy_responses: {
+        Row: {
+          action_taken: string | null
+          aggravation: string | null
+          assessed_on: string
+          case_record_id: string | null
+          created_at: string
+          id: string
+          improvement_score: number | null
+          notes: string | null
+          patient_id: string
+          potency: string | null
+          prescription_id: string | null
+          recorded_by: string | null
+          remedy_name: string
+          response: string
+        }
+        Insert: {
+          action_taken?: string | null
+          aggravation?: string | null
+          assessed_on?: string
+          case_record_id?: string | null
+          created_at?: string
+          id?: string
+          improvement_score?: number | null
+          notes?: string | null
+          patient_id: string
+          potency?: string | null
+          prescription_id?: string | null
+          recorded_by?: string | null
+          remedy_name: string
+          response?: string
+        }
+        Update: {
+          action_taken?: string | null
+          aggravation?: string | null
+          assessed_on?: string
+          case_record_id?: string | null
+          created_at?: string
+          id?: string
+          improvement_score?: number | null
+          notes?: string | null
+          patient_id?: string
+          potency?: string | null
+          prescription_id?: string | null
+          recorded_by?: string | null
+          remedy_name?: string
+          response?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remedy_responses_case_record_id_fkey"
+            columns: ["case_record_id"]
+            isOneToOne: false
+            referencedRelation: "case_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remedy_responses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remedy_responses_prescription_id_fkey"
+            columns: ["prescription_id"]
+            isOneToOne: false
+            referencedRelation: "prescriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reschedule_requests: {
         Row: {
